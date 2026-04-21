@@ -2,15 +2,15 @@
   "string": [
     {
       "name": "module_desc",
-      "value": "Minimal 3D map interaction demo"
+      "value": "发布级蜗牛推箱子小游戏"
     },
     {
       "name": "EntryAbility_desc",
-      "value": "Entry ability"
+      "value": "蜗牛推箱子主能力"
     },
     {
       "name": "EntryAbility_label",
-      "value": "3D Map Demo"
+      "value": "蜗牛推箱子"
     }
   ]
 }

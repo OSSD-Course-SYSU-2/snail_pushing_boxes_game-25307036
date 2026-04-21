@@ -1,33 +1,92 @@
-import { describe, beforeAll, beforeEach, afterEach, afterAll, it, expect } from '@ohos/hypium';
+import { describe, it, expect } from '@ohos/hypium';
+import { SNAIL_LEVELS, SnailLevel } from '../main/ets/data/SnailLevels';
+import {
+  getDeadlockedBoxKeys,
+  isLevelSolved,
+  keyFor,
+  parseLevel,
+  tryMove
+} from '../main/ets/utils/SokobanLogic';
 
 export default function localUnitTest() {
-  describe('localUnitTest', () => {
-    // Defines a test suite. Two parameters are supported: test suite name and test suite function.
-    beforeAll(() => {
-      // Presets an action, which is performed only once before all test cases of the test suite start.
-      // This API supports only one parameter: preset action function.
+  describe('sokobanLogic', () => {
+    it('parsesLevelMetadata', 0, () => {
+      const parsed = parseLevel(SNAIL_LEVELS[0]);
+      expect(parsed.goalKeys.length).assertEqual(1);
+      expect(parsed.boxKeys.length).assertEqual(1);
+      expect(parsed.playerKey).assertEqual(keyFor(3, 3));
+      expect(parsed.floorKeys.length > 0).assertEqual(true);
     });
-    beforeEach(() => {
-      // Presets an action, which is performed before each unit test case starts.
-      // The number of execution times is the same as the number of test cases defined by **it**.
-      // This API supports only one parameter: preset action function.
+
+    it('preventsMovingIntoVoidSpace', 0, () => {
+      const level: SnailLevel = {
+        id: 99,
+        name: 'Void Test',
+        subtitle: 'test',
+        difficulty: '测试',
+        hint: 'test',
+        parMoves: 1,
+        map: [
+          '#####',
+          '#@  #',
+          '#',
+          '#####'
+        ]
+      };
+      const parsed = parseLevel(level);
+      const attempt = tryMove(parsed.playerKey, parsed.boxKeys, parsed.wallKeys, parsed.floorKeys, 1, 0);
+      expect(attempt.moved).assertEqual(false);
+      expect(attempt.message).assertEqual('前面没有可走的路。');
     });
-    afterEach(() => {
-      // Presets a clear action, which is performed after each unit test case ends.
-      // The number of execution times is the same as the number of test cases defined by **it**.
-      // This API supports only one parameter: clear action function.
+
+    it('pushesBoxWhenThePathIsClear', 0, () => {
+      const level: SnailLevel = {
+        id: 100,
+        name: 'Push Test',
+        subtitle: 'test',
+        difficulty: '测试',
+        hint: 'test',
+        parMoves: 1,
+        map: [
+          '#######',
+          '#@$.  #',
+          '#######'
+        ]
+      };
+      const parsed = parseLevel(level);
+      const attempt = tryMove(parsed.playerKey, parsed.boxKeys, parsed.wallKeys, parsed.floorKeys, 0, 1);
+      expect(attempt.moved).assertEqual(true);
+      expect(attempt.pushed).assertEqual(true);
+      expect(attempt.nextPlayerKey).assertEqual(keyFor(1, 2));
+      expect(attempt.nextBoxKeys[0]).assertEqual(keyFor(1, 3));
     });
-    afterAll(() => {
-      // Presets a clear action, which is performed after all test cases of the test suite end.
-      // This API supports only one parameter: clear action function.
+
+    it('detectsSolvedStateOnlyWhenAllGoalsAreCovered', 0, () => {
+      const parsed = parseLevel(SNAIL_LEVELS[0]);
+      expect(isLevelSolved([parsed.goalKeys[0]], parsed.goalKeys)).assertEqual(true);
+      expect(isLevelSolved([parsed.goalKeys[0], keyFor(0, 0)], parsed.goalKeys)).assertEqual(false);
     });
-    it('assertContain', 0, () => {
-      // Defines a test case. This API supports three parameters: test case name, filter parameter, and test case function.
-      let a = 'abc';
-      let b = 'b';
-      // Defines a variety of assertion methods, which are used to declare expected boolean conditions.
-      expect(a).assertContain(b);
-      expect(a).assertEqual(a);
+
+    it('marksBoxesInStaticCornersAsDeadlocked', 0, () => {
+      const level: SnailLevel = {
+        id: 101,
+        name: 'Deadlock Test',
+        subtitle: 'test',
+        difficulty: '测试',
+        hint: 'test',
+        parMoves: 1,
+        map: [
+          '#####',
+          '#@  #',
+          '#  $#',
+          '# .##',
+          '#####'
+        ]
+      };
+      const parsed = parseLevel(level);
+      const deadlocked = getDeadlockedBoxKeys(parsed.boxKeys, parsed.wallKeys, parsed.goalKeys, parsed.floorKeys);
+      expect(deadlocked.length).assertEqual(1);
+      expect(deadlocked[0]).assertEqual(keyFor(2, 3));
     });
   });
 }

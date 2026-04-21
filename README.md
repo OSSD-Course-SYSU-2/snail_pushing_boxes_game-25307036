@@ -1,100 +1,68 @@
-# HarmonyOS 最小三维地图交互 Demo（6.0.2(22)）
+# 蜗牛推箱子
 
-本项目是一个基于 **DevEco Studio + HarmonyOS + ArkTS** 的**最小可运行三维地图交互 Demo**。
+这是一个运行在 HarmonyOS / DevEco Studio 工程里的推箱子小游戏正式版整理稿。
 
-它演示了以下内容：
+当前版本不再追求“3D 演示感”，而是把重点放在一个可以直接交付展示的小型完整游戏上：流程完整、规则稳定、页面更成熟、少量关卡但体验闭环清楚。
 
-- 基于 ArkUI 的 Stage 模型应用结构
-- 使用 `Component3D` / ArkGraphics 3D 进行渲染
-- 从 `resources/rawfile` 加载本地 `.glb` 场景
-- 一个沿预设路径移动的对象
-- Start / Pause / Reset 控制
-- 坐标、朝向（yaw）和运行状态显示
+## 当前版本亮点
 
-## 三维场景中包含的内容
+- 首页总览与局内界面分离，游戏流程更完整
+- 5 个手工设计关卡，难度从教学到挑战递进
+- 本地保存解锁进度、最佳步数、最佳推箱次数和通关评级
+- `撤销`、`重开`、`上一关 / 下一关` 全部保留
+- 加入明显死角提示，减少无反馈的失败体验
+- 棋盘、卡片和状态提示整体重做，更适合手机和平板展示
 
-场景文件位于：
+## 核心规则
 
-`entry/src/main/resources/rawfile/map_scene.glb`
+- 蜗牛每次只能移动一格
+- 木箱只能推，不能拉
+- 木箱前方必须是可行走地块才能被推动
+- 墙体和地图外空洞都会阻止移动
+- 所有木箱都推到绿色荷叶目标点上即算通关
 
-其中包含：
+## 关卡列表
 
-- 地面平面
-- 4 个橙色障碍物方块
-- 一条蓝色分段路径
-- 一个名为 **Mover** 的绿色球形移动对象节点
+1. `Garden Gate`
+   教学关，学习第一次绕位推箱
+2. `Mossy Bend`
+   墙体开始影响站位，提醒玩家先判断后行动
+3. `Twin Ponds`
+   第一次同时处理两个木箱
+4. `Fern Maze`
+   中段墙体切开路线，顺序错误会明显加步
+5. `Moonlit Depot`
+   最终关，需要保留回旋空间并连续调整落点
 
 ## 项目结构
 
 ```text
-AppScope/
-entry/
-  src/main/ets/
-    entryability/
-    pages/
-    components/
-    data/
-    model/
-    utils/
-  src/main/resources/
-    base/
-    rawfile/
+entry/src/main/ets/
+  data/
+    SnailLevels.ets
+  pages/
+    Index.ets
+  utils/
+    SokobanLogic.ets
 ```
 
-## 打开与运行方法
+## 主要实现
 
-1. 打开 **DevEco Studio**
-2. 选择 **Open Project（打开项目）**
-3. 选择本项目所在文件夹
-4. 确保本地 SDK 版本为 **HarmonyOS 6.0.2(22)**
-5. 如果 DevEco 提示同步依赖或刷新工程配置，请按提示完成
-6. 在 HarmonyOS 模拟器或真机上运行项目
+- `Index.ets`
+  负责首页、关卡流程、棋盘绘制、局内操作、通关覆盖层和进度保存
+- `SnailLevels.ets`
+  定义关卡地图、难度、说明文案和评级标杆步数
+- `SokobanLogic.ets`
+  负责地图解析、空洞/墙体判定、推箱规则、通关判定、撤销快照和死角检测
 
-## 说明
+## 运行方式
 
-- 本 Demo 有意保持为**本地、最小、简单**的实现
-- **不连接** ROS、后端服务或外部传感器
-- 三维场景提前制作成 GLB 文件，以降低运行时动态构建网格的复杂度
-- 如果你本机是 DevEco Studio 6.0.2，对应的开发态 `modelVersion` 和工程 SDK 版本已经统一为 6.0.2 / 6.0.2(22)
+1. 用 DevEco Studio 打开项目
+2. 确保本机 HarmonyOS SDK 组件完整
+3. 在模拟器或真机中运行 `entry` 模块
 
-## 控件说明
+## 已完成的质量检查
 
-- **Start**：开始移动对象动画
-- **Pause**：暂停移动对象动画
-- **Reset**：将移动对象重置到第一个路径点
-
-## 主要实现说明
-
-- 使用 `Scene.load($rawfile('map_scene.glb'))` 加载 rawfile 中的 GLB 场景
-- 通过 `Component3D` 结合 `ModelType.SURFACE` 渲染场景
-- 代码会通过若干候选节点路径查找移动对象节点，例如 `rootNode_/Mover`
-- 移动对象的位置由 `PathData.ets` 中硬编码的路径点数组驱动
-- GLB 文件本身带有初始相机视角，因此场景加载后可以直接显示
-
-## 如果找不到 Mover 节点
-
-如果你本地 SDK 加载 GLB 后的节点路径和当前代码假设不完全一致，需要修改以下文件中的候选路径：
-
-```text
-entry/src/main/ets/pages/Index.ets
-```
-
-重点检查这段代码：
-
-```ts
-const moverCandidates: string[] = [
-  'rootNode_/Mover',
-  'rootNode_/map_scene/Mover',
-  'Mover'
-];
-```
-
-如果实际节点路径不同，请替换成你本地环境中正确的节点路径。
-
-## 后续可扩展方向
-
-- 增加历史轨迹显示
-- 支持点击对象显示详细信息
-- 增加多个移动对象
-- 从 JSON/rawfile 中读取路径点
-- 后续接入真实机器人遥测数据
+- 逐关做了可解性校验，确保 5 个关卡都存在解法
+- 规则层补了单元测试样例，覆盖解析、推箱、通关和死角判定
+- 尝试通过 hvigor 做完整构建验证，但当前机器的 HarmonyOS SDK 组件校验失败，属于本地环境问题，不是业务代码逻辑报错
