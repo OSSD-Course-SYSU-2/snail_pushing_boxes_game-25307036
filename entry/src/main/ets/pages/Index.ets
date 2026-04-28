@@ -297,7 +297,7 @@ struct Index {
         .fontColor('#FFF6E6')
         .fontFamily('HarmonyOS Sans SC')
 
-      Text('围绕少量高质量关卡重新整理的正式版：流程更完整，反馈更稳定，通关评级和解锁进度都会自动保存在本机。')
+      Text(`围绕 ${SNAIL_LEVELS.length} 个手工设计关卡重新整理的正式版：流程更完整，反馈更稳定，通关评级和解锁进度都会自动保存在本机。`)
         .fontSize(15)
         .lineHeight(24)
         .fontColor('#E6DEC8')
@@ -354,7 +354,7 @@ struct Index {
         .fontWeight(FontWeight.Bold)
         .fontColor('#FFF6E6')
 
-      Text('只保留少量精修关卡。每一关都支持重玩、通关评级和自动进度保存。')
+      Text(`当前一共 ${SNAIL_LEVELS.length} 关。每一关都支持重玩、通关评级和自动进度保存。`)
         .fontSize(14)
         .fontColor('#D8D3C3')
 

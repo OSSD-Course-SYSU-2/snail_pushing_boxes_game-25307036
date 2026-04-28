@@ -4,6 +4,7 @@ import {
   getDeadlockedBoxKeys,
   isLevelSolved,
   keyFor,
+  ParsedLevel,
   parseLevel,
   tryMove
 } from '../main/ets/utils/SokobanLogic';
@@ -88,5 +89,84 @@ export default function localUnitTest() {
       expect(deadlocked.length).assertEqual(1);
       expect(deadlocked[0]).assertEqual(keyFor(2, 3));
     });
+
+    it('keepsAllCampaignLevelsSolvableAndBenchmarked', 0, () => {
+      expect(SNAIL_LEVELS.length).assertEqual(11);
+
+      for (let levelIndex = 0; levelIndex < SNAIL_LEVELS.length; levelIndex++) {
+        const level = SNAIL_LEVELS[levelIndex];
+        const parsed = parseLevel(level);
+        expect(parsed.goalKeys.length).assertEqual(parsed.boxKeys.length);
+
+        const bestMoves = solveLevelInMoves(level);
+        expect(bestMoves > 0).assertEqual(true);
+        expect(bestMoves).assertEqual(level.parMoves);
+      }
+    });
   });
+}
+
+interface SearchState {
+  playerKey: string;
+  boxKeys: string[];
+  moves: number;
+}
+
+function solveLevelInMoves(level: SnailLevel): number {
+  const parsed = parseLevel(level);
+  const queue: SearchState[] = [{
+    playerKey: parsed.playerKey,
+    boxKeys: parsed.boxKeys,
+    moves: 0
+  }];
+  const visited: Set<string> = new Set<string>();
+  let head = 0;
+
+  visited.add(searchStateKey(parsed.playerKey, parsed.boxKeys));
+
+  while (head < queue.length) {
+    const current = queue[head];
+    head += 1;
+
+    if (isLevelSolved(current.boxKeys, parsed.goalKeys)) {
+      return current.moves;
+    }
+
+    pushIfReachable(queue, visited, current, parsed, -1, 0);
+    pushIfReachable(queue, visited, current, parsed, 1, 0);
+    pushIfReachable(queue, visited, current, parsed, 0, -1);
+    pushIfReachable(queue, visited, current, parsed, 0, 1);
+  }
+
+  return -1;
+}
+
+function pushIfReachable(
+  queue: SearchState[],
+  visited: Set<string>,
+  current: SearchState,
+  parsed: ParsedLevel,
+  deltaRow: number,
+  deltaCol: number
+): void {
+  const attempt = tryMove(current.playerKey, current.boxKeys, parsed.wallKeys, parsed.floorKeys, deltaRow, deltaCol);
+  if (!attempt.moved) {
+    return;
+  }
+
+  const nextKey = searchStateKey(attempt.nextPlayerKey, attempt.nextBoxKeys);
+  if (visited.has(nextKey)) {
+    return;
+  }
+
+  visited.add(nextKey);
+  queue.push({
+    playerKey: attempt.nextPlayerKey,
+    boxKeys: attempt.nextBoxKeys,
+    moves: current.moves + 1
+  });
+}
+
+function searchStateKey(playerKey: string, boxKeys: string[]): string {
+  return `${playerKey}|${boxKeys.join(',')}`;
 }
