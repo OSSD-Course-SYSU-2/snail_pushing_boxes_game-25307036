@@ -1,5 +1,8 @@
 import { SnailLevel } from '../data/SnailLevels';
 
+const VERTICAL_ORIENTATION: string = 'vertical';
+const VOID_TILE: string = '\0';
+
 export interface ParsedLevel {
   width: number;
   height: number;
@@ -41,8 +44,9 @@ export function colFromKey(key: string): number {
 }
 
 export function parseLevel(level: SnailLevel): ParsedLevel {
+  const mapRows = orientedLevelMap(level);
   let width = 0;
-  for (const row of level.map) {
+  for (const row of mapRows) {
     width = Math.max(width, row.length);
   }
 
@@ -52,8 +56,8 @@ export function parseLevel(level: SnailLevel): ParsedLevel {
   const boxKeys: string[] = [];
   let playerKey = keyFor(0, 0);
 
-  for (let rowIndex = 0; rowIndex < level.map.length; rowIndex++) {
-    const rowText = level.map[rowIndex];
+  for (let rowIndex = 0; rowIndex < mapRows.length; rowIndex++) {
+    const rowText = mapRows[rowIndex];
     for (let colIndex = 0; colIndex < rowText.length; colIndex++) {
       const token = rowText[colIndex];
       const key = keyFor(rowIndex, colIndex);
@@ -83,6 +87,8 @@ export function parseLevel(level: SnailLevel): ParsedLevel {
           goalKeys.push(key);
           playerKey = key;
           break;
+        case VOID_TILE:
+          break;
         default:
           floorKeys.push(key);
           break;
@@ -92,13 +98,38 @@ export function parseLevel(level: SnailLevel): ParsedLevel {
 
   return {
     width,
-    height: level.map.length,
+    height: mapRows.length,
     floorKeys: sortedKeys(floorKeys),
     wallKeys: sortedKeys(wallKeys),
     goalKeys: sortedKeys(goalKeys),
     boxKeys: sortedKeys(boxKeys),
     playerKey
   };
+}
+
+export function orientedLevelMap(level: SnailLevel): string[] {
+  if (level.orientation === VERTICAL_ORIENTATION) {
+    return rotateLevelMapClockwise(level.map);
+  }
+  return cloneRows(level.map);
+}
+
+export function rotateLevelMapClockwise(mapRows: string[]): string[] {
+  let width = 0;
+  for (const row of mapRows) {
+    width = Math.max(width, row.length);
+  }
+
+  const rotated: string[] = [];
+  for (let col = 0; col < width; col++) {
+    let nextRow = '';
+    for (let row = mapRows.length - 1; row >= 0; row--) {
+      const sourceRow = mapRows[row];
+      nextRow += col < sourceRow.length ? sourceRow[col] : VOID_TILE;
+    }
+    rotated.push(trimTrailingVoidTiles(nextRow));
+  }
+  return rotated;
 }
 
 export function tryMove(
@@ -211,6 +242,14 @@ export function cloneKeys(keys: string[]): string[] {
   return next;
 }
 
+function cloneRows(rows: string[]): string[] {
+  const next: string[] = [];
+  for (const row of rows) {
+    next.push(row);
+  }
+  return next;
+}
+
 export function hasKey(keys: string[], target: string): boolean {
   return indexOfKey(keys, target) >= 0;
 }
@@ -271,4 +310,12 @@ function sortedKeys(keys: string[]): string[] {
 
 function isStaticBlock(key: string, wallKeys: string[], floorKeys: string[]): boolean {
   return hasKey(wallKeys, key) || !hasKey(floorKeys, key);
+}
+
+function trimTrailingVoidTiles(row: string): string {
+  let end = row.length;
+  while (end > 0 && row[end - 1] === VOID_TILE) {
+    end -= 1;
+  }
+  return row.slice(0, end);
 }

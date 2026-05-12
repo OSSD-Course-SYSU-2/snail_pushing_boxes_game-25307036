@@ -1,6 +1,11 @@
 import { describe, it, expect } from '@ohos/hypium';
 import { SNAIL_LEVELS, SnailLevel } from '../main/ets/data/SnailLevels';
 import {
+  KeyboardMove,
+  keyboardMoveFromCode,
+  keyboardMoveFromText
+} from '../main/ets/utils/KeyboardMapping';
+import {
   getDeadlockedBoxKeys,
   isLevelSolved,
   keyFor,
@@ -17,6 +22,46 @@ export default function localUnitTest() {
       expect(parsed.boxKeys.length).assertEqual(1);
       expect(parsed.playerKey).assertEqual(keyFor(3, 3));
       expect(parsed.floorKeys.length > 0).assertEqual(true);
+    });
+
+    it('rotatesVerticalLevelMapsBeforeParsing', 0, () => {
+      const level: SnailLevel = {
+        id: 98,
+        name: 'Vertical Test',
+        subtitle: 'test',
+        difficulty: '测试',
+        hint: 'test',
+        parMoves: 1,
+        orientation: 'vertical',
+        map: [
+          '#####',
+          '#@$.#',
+          '#####'
+        ]
+      };
+      const parsed = parseLevel(level);
+      expect(parsed.width).assertEqual(3);
+      expect(parsed.height).assertEqual(5);
+      expect(parsed.playerKey).assertEqual(keyFor(1, 1));
+      expect(parsed.boxKeys[0]).assertEqual(keyFor(2, 1));
+      expect(parsed.goalKeys[0]).assertEqual(keyFor(3, 1));
+    });
+
+    it('mapsKeyboardControlsToDirections', 0, () => {
+      const upByText = keyboardMoveFromText('KEYCODE_W') as KeyboardMove;
+      const leftByText = keyboardMoveFromText('a') as KeyboardMove;
+      const downByCode = keyboardMoveFromCode(2013) as KeyboardMove;
+      const rightByCode = keyboardMoveFromCode(2020) as KeyboardMove;
+
+      expect(upByText.deltaRow).assertEqual(-1);
+      expect(upByText.deltaCol).assertEqual(0);
+      expect(leftByText.deltaRow).assertEqual(0);
+      expect(leftByText.deltaCol).assertEqual(-1);
+      expect(downByCode.deltaRow).assertEqual(1);
+      expect(downByCode.deltaCol).assertEqual(0);
+      expect(rightByCode.deltaRow).assertEqual(0);
+      expect(rightByCode.deltaCol).assertEqual(1);
+      expect(keyboardMoveFromText('KEYCODE_ENTER') === undefined).assertEqual(true);
     });
 
     it('preventsMovingIntoVoidSpace', 0, () => {

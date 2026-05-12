@@ -5,6 +5,7 @@ export interface SnailLevel {
   difficulty: string;
   hint: string;
   parMoves: number;
+  orientation?: string;
   map: string[];
 }
 
@@ -100,6 +101,7 @@ export const SNAIL_LEVELS: SnailLevel[] = [
     difficulty: '挑战',
     hint: '先把左下木箱送上去，别急着处理中间那只。',
     parMoves: 47,
+    orientation: 'vertical',
     map: [
       '###########',
       '# .   .   #',
@@ -117,6 +119,7 @@ export const SNAIL_LEVELS: SnailLevel[] = [
     difficulty: '挑战',
     hint: '中间箱子不要太早顶头，先给两侧留出调整空间。',
     parMoves: 51,
+    orientation: 'vertical',
     map: [
       '###########',
       '#  . . .  #',
@@ -134,6 +137,7 @@ export const SNAIL_LEVELS: SnailLevel[] = [
     difficulty: '挑战',
     hint: '先清左侧目标，再把右半场当成最后收口区域。',
     parMoves: 51,
+    orientation: 'vertical',
     map: [
       '###########',
       '#  . . .  #',
@@ -151,6 +155,7 @@ export const SNAIL_LEVELS: SnailLevel[] = [
     difficulty: '挑战',
     hint: '别把右侧木箱太早顶死，中路回身口要尽量保留久一点。',
     parMoves: 53,
+    orientation: 'vertical',
     map: [
       '###########',
       '#  . . .  #',
@@ -168,6 +173,7 @@ export const SNAIL_LEVELS: SnailLevel[] = [
     difficulty: '挑战',
     hint: '中心门洞是唯一的借位位置，不要太早把自己锁在上半场。',
     parMoves: 56,
+    orientation: 'vertical',
     map: [
       '###########',
       '#  . . .  #',
@@ -185,6 +191,7 @@ export const SNAIL_LEVELS: SnailLevel[] = [
     difficulty: '挑战',
     hint: '先稳住中间木箱，再按左、中、右的节奏慢慢收口。',
     parMoves: 57,
+    orientation: 'vertical',
     map: [
       '###########',
       '#  . . .  #',

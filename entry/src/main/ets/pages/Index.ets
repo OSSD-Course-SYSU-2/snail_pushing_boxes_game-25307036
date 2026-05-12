@@ -1,4 +1,5 @@
 import { SNAIL_LEVELS, SnailLevel } from '../data/SnailLevels';
+import { keyboardMoveFromKey } from '../utils/KeyboardMapping';
 import {
   countGoalsCovered,
   decodeSnapshot,
@@ -14,7 +15,8 @@ import {
 const VIEW_HOME: number = 0;
 const VIEW_PLAY: number = 1;
 const SAVE_KEY: string = 'snail_publish_save_data';
-const DEFAULT_SAVE_DATA_TEXT: string = '{"unlockedLevelCount":1,"lastPlayedLevelIndex":0,"records":[]}';
+const DEFAULT_SAVE_DATA_TEXT: string = '{"lastPlayedLevelIndex":0,"records":[]}';
+const GAME_FOCUS_ID: string = 'snail-game-root';
 
 PersistentStorage.persistProp(SAVE_KEY, DEFAULT_SAVE_DATA_TEXT);
 
@@ -26,7 +28,6 @@ interface LevelRecord {
 }
 
 interface SaveData {
-  unlockedLevelCount: number;
   lastPlayedLevelIndex: number;
   records: LevelRecord[];
 }
@@ -58,7 +59,7 @@ struct Index {
     this.ensureSaveData();
     this.loadLevel(this.readSaveData().lastPlayedLevelIndex);
     this.currentView = VIEW_HOME;
-    this.setStatus('选择一个已经解锁的关卡，帮蜗牛把补给箱慢慢送回荷叶码头。', 0);
+    this.setStatus('选择任意关卡，帮蜗牛把补给箱慢慢送回荷叶码头。', 0);
   }
 
   build() {
@@ -106,8 +107,14 @@ struct Index {
     }
     .width('100%')
     .height('100%')
+    .id(GAME_FOCUS_ID)
+    .focusable(true)
+    .defaultFocus(true)
     .backgroundColor('#10261C')
     .scrollBar(BarState.Auto)
+    .onAppear(() => this.focusGameRoot())
+    .onClick(() => this.focusGameRoot())
+    .onKeyEvent((event?: KeyEvent) => this.handleKeyboardEvent(event))
     .onAreaChange((oldValue, newValue) => {
       this.updateLayoutWidth(newValue.width as number | string);
     })
@@ -137,20 +144,14 @@ struct Index {
   }
 
   private openLevel(levelIndex: number): void {
-    if (!this.isLevelUnlocked(levelIndex)) {
-      this.setStatus('这一关还没解锁，先完成前面的路线。', 2);
-      this.currentView = VIEW_HOME;
-      return;
-    }
     this.loadLevel(levelIndex);
     this.currentView = VIEW_PLAY;
+    this.focusGameRoot();
   }
 
   private continueAdventure(): void {
     const saveData = this.readSaveData();
-    const nextIndex = this.isLevelUnlocked(saveData.lastPlayedLevelIndex) ?
-      saveData.lastPlayedLevelIndex : this.recommendedLevelIndex();
-    this.openLevel(nextIndex);
+    this.openLevel(saveData.lastPlayedLevelIndex);
   }
 
   private playRecommendedLevel(): void {
@@ -251,11 +252,6 @@ struct Index {
       return;
     }
 
-    if (!this.isLevelUnlocked(this.levelIndex + 1)) {
-      this.setStatus('下一关尚未解锁，先完成当前关。', 2);
-      return;
-    }
-
     this.openLevel(this.levelIndex + 1);
   }
 
@@ -265,6 +261,29 @@ struct Index {
       return;
     }
     this.openLevel(this.levelIndex - 1);
+  }
+
+  private handleKeyboardEvent(event?: KeyEvent): void {
+    if (!event || this.currentView !== VIEW_PLAY || event.type !== KeyType.Down) {
+      return;
+    }
+
+    const move = keyboardMoveFromKey(event.keyCode, event.keyText);
+    if (move === undefined) {
+      return;
+    }
+
+    if (event.stopPropagation) {
+      event.stopPropagation();
+    }
+    this.moveSnail(move.deltaRow, move.deltaCol);
+  }
+
+  private focusGameRoot(): void {
+    try {
+      this.getUIContext().getFocusController().requestFocus(GAME_FOCUS_ID);
+    } catch (error) {
+    }
   }
 
   @Builder
@@ -297,7 +316,7 @@ struct Index {
         .fontColor('#FFF6E6')
         .fontFamily('HarmonyOS Sans SC')
 
-      Text(`围绕 ${SNAIL_LEVELS.length} 个手工设计关卡重新整理的正式版：流程更完整，反馈更稳定，通关评级和解锁进度都会自动保存在本机。`)
+      Text(`围绕 ${SNAIL_LEVELS.length} 个手工设计关卡重新整理的正式版：流程更完整，反馈更稳定，通关评级和最近游玩进度都会自动保存在本机。`)
         .fontSize(15)
         .lineHeight(24)
         .fontColor('#E6DEC8')
@@ -380,13 +399,13 @@ struct Index {
         Column({ space: 10 }) {
           this.featureItem('稳定规则', '墙体、空洞、推箱判定分离处理，避免走出棋盘。')
           this.featureItem('局内反馈', '支持撤销、重开、死角提示和即时状态说明。')
-          this.featureItem('发布级流程', '首页总览、关卡解锁、评级纪录和自动保存都已接通。')
+          this.featureItem('发布级流程', '首页总览、自由选关、评级纪录和自动保存都已接通。')
         }
       } else {
         Row({ space: 10 }) {
           this.featureItem('稳定规则', '墙体、空洞、推箱判定分离处理，避免走出棋盘。')
           this.featureItem('局内反馈', '支持撤销、重开、死角提示和即时状态说明。')
-          this.featureItem('发布级流程', '首页总览、关卡解锁、评级纪录和自动保存都已接通。')
+          this.featureItem('发布级流程', '首页总览、自由选关、评级纪录和自动保存都已接通。')
         }
         .width('100%')
       }
@@ -539,7 +558,7 @@ struct Index {
         .lineHeight(20)
         .fontColor('#56742B')
 
-      Text('说明：通关纪录、评级和解锁进度会自动保存。')
+      Text('说明：通关纪录、评级和最近游玩进度会自动保存。')
         .fontSize(13)
         .lineHeight(20)
         .fontColor('#6A573C')
@@ -591,8 +610,8 @@ struct Index {
               .textAlign(TextAlign.Center)
 
             Row({ space: 8 }) {
-              this.overlayButton(this.hasNextUnlockedLevel() ? '下一关' : '回到总览', '#2E7A52', true, () => {
-                if (this.hasNextUnlockedLevel()) {
+              this.overlayButton(this.hasNextLevel() ? '下一关' : '回到总览', '#2E7A52', true, () => {
+                if (this.hasNextLevel()) {
                   this.nextLevel();
                 } else {
                   this.returnHome();
@@ -714,14 +733,13 @@ struct Index {
 
       Text(this.levelActionHint(levelIndex))
         .fontSize(12)
-        .fontColor(this.isLevelUnlocked(levelIndex) ? '#305B46' : '#73685A')
+        .fontColor('#305B46')
     }
     .alignItems(HorizontalAlign.Start)
     .width('100%')
     .padding(compact ? 14 : 16)
     .backgroundColor(this.levelCardBackground(levelIndex))
     .borderRadius(18)
-    .opacity(this.isLevelUnlocked(levelIndex) ? 1 : 0.58)
     .onClick(() => this.openLevel(levelIndex))
   }
 
@@ -1102,7 +1120,6 @@ struct Index {
       const raw = JSON.parse(this.saveDataText) as SaveData;
       const records = this.normalizeRecords(raw.records);
       return {
-        unlockedLevelCount: this.clampUnlockedCount(raw.unlockedLevelCount),
         lastPlayedLevelIndex: this.safeLevelIndex(raw.lastPlayedLevelIndex),
         records
       };
@@ -1113,7 +1130,6 @@ struct Index {
 
   private writeSaveData(saveData: SaveData): void {
     const normalized: SaveData = {
-      unlockedLevelCount: this.clampUnlockedCount(saveData.unlockedLevelCount),
       lastPlayedLevelIndex: this.safeLevelIndex(saveData.lastPlayedLevelIndex),
       records: this.normalizeRecords(saveData.records)
     };
@@ -1126,7 +1142,6 @@ struct Index {
 
   private defaultSaveData(): SaveData {
     return {
-      unlockedLevelCount: 1,
       lastPlayedLevelIndex: 0,
       records: []
     };
@@ -1161,16 +1176,6 @@ struct Index {
     return next;
   }
 
-  private clampUnlockedCount(count: number): number {
-    if (Number.isNaN(count) || count < 1) {
-      return 1;
-    }
-    if (count > SNAIL_LEVELS.length) {
-      return SNAIL_LEVELS.length;
-    }
-    return count;
-  }
-
   private safeLevelIndex(index: number): number {
     if (Number.isNaN(index) || index < 0) {
       return 0;
@@ -1190,7 +1195,6 @@ struct Index {
   private persistClearRecord(levelIndex: number, moves: number, pushes: number, stars: number): void {
     const saveData = this.readSaveData();
     saveData.lastPlayedLevelIndex = levelIndex;
-    saveData.unlockedLevelCount = this.clampUnlockedCount(Math.max(saveData.unlockedLevelCount, levelIndex + 2));
 
     const levelId = SNAIL_LEVELS[levelIndex].id;
     let matched = false;
@@ -1246,13 +1250,12 @@ struct Index {
   }
 
   private recommendedLevelIndex(): number {
-    const unlockedLevelCount = this.readSaveData().unlockedLevelCount;
-    for (let levelIndex = 0; levelIndex < unlockedLevelCount; levelIndex++) {
+    for (let levelIndex = 0; levelIndex < SNAIL_LEVELS.length; levelIndex++) {
       if (!this.isLevelCleared(levelIndex)) {
         return levelIndex;
       }
     }
-    return this.safeLevelIndex(unlockedLevelCount - 1);
+    return SNAIL_LEVELS.length - 1;
   }
 
   private homeRecordSummary(): string {
@@ -1277,7 +1280,7 @@ struct Index {
   private levelRecordShortLabel(levelIndex: number): string {
     const record = this.findRecordForLevel(levelIndex);
     if (!record) {
-      return this.isLevelUnlocked(levelIndex) ? '待完成' : '锁定';
+      return '待完成';
     }
     return `${record.bestStars} 星`;
   }
@@ -1311,18 +1314,11 @@ struct Index {
     return Math.max(2, Math.floor(parMoves / 4));
   }
 
-  private isLevelUnlocked(levelIndex: number): boolean {
-    return levelIndex < this.readSaveData().unlockedLevelCount;
-  }
-
   private isLevelCleared(levelIndex: number): boolean {
     return this.findRecordForLevel(levelIndex) !== undefined;
   }
 
   private levelStateLabel(levelIndex: number): string {
-    if (!this.isLevelUnlocked(levelIndex)) {
-      return '未解锁';
-    }
     if (this.isLevelCleared(levelIndex)) {
       return '已通关';
     }
@@ -1330,9 +1326,6 @@ struct Index {
   }
 
   private levelStateColor(levelIndex: number): string {
-    if (!this.isLevelUnlocked(levelIndex)) {
-      return '#6B655F';
-    }
     if (this.isLevelCleared(levelIndex)) {
       return '#2F7A51';
     }
@@ -1350,9 +1343,6 @@ struct Index {
   }
 
   private levelActionHint(levelIndex: number): string {
-    if (!this.isLevelUnlocked(levelIndex)) {
-      return '完成前一关后解锁';
-    }
     if (this.currentView === VIEW_PLAY && levelIndex === this.levelIndex) {
       return '当前正在挑战';
     }
@@ -1366,18 +1356,15 @@ struct Index {
     if (this.currentView === VIEW_PLAY && levelIndex === this.levelIndex) {
       return '#E9DCC0';
     }
-    if (this.isLevelUnlocked(levelIndex)) {
-      return '#F1E4CD';
-    }
-    return '#D8CFBF';
+    return '#F1E4CD';
   }
 
   private canEnterNextLevel(): boolean {
-    return this.levelIndex < SNAIL_LEVELS.length - 1 && this.isLevelUnlocked(this.levelIndex + 1);
+    return this.levelIndex < SNAIL_LEVELS.length - 1;
   }
 
-  private hasNextUnlockedLevel(): boolean {
-    return this.levelIndex < SNAIL_LEVELS.length - 1 && this.isLevelUnlocked(this.levelIndex + 1);
+  private hasNextLevel(): boolean {
+    return this.levelIndex < SNAIL_LEVELS.length - 1;
   }
 
   private coveredGoalsText(): string {
@@ -1394,6 +1381,9 @@ struct Index {
     }
     if (this.isCleared) {
       return '通关完成';
+    }
+    if (this.currentLevel().orientation === 'vertical') {
+      return '竖版地图';
     }
     return '移动规划';
   }
@@ -1484,9 +1474,9 @@ struct Index {
     if (this.layoutWidth <= 0) {
       return 48;
     }
-    const availableWidth = this.isCompactLayout() ? this.layoutWidth - 76 : this.layoutWidth * 0.36;
+    const availableWidth = this.isCompactLayout() ? this.layoutWidth - 124 : this.layoutWidth * 0.36 - 92;
     const nextSize = Math.floor(availableWidth / Math.max(this.boardWidth, 1));
-    return Math.max(36, Math.min(56, nextSize));
+    return Math.max(20, Math.min(56, nextSize));
   }
 
   private isCompactLayout(): boolean {
