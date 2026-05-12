@@ -1,3 +1,6 @@
+import { common } from '@kit.AbilityKit';
+import { resourceManager } from '@kit.LocalizationKit';
+import { media } from '@kit.MediaKit';
 import { SNAIL_LEVELS, SnailLevel } from '../data/SnailLevels';
 import { keyboardMoveFromKey } from '../utils/KeyboardMapping';
 import {
@@ -12,11 +15,15 @@ import {
   tryMove
 } from '../utils/SokobanLogic';
 
+const VIEW_START: number = -1;
 const VIEW_HOME: number = 0;
 const VIEW_PLAY: number = 1;
 const SAVE_KEY: string = 'snail_publish_save_data';
 const DEFAULT_SAVE_DATA_TEXT: string = '{"lastPlayedLevelIndex":0,"records":[]}';
 const GAME_FOCUS_ID: string = 'snail-game-root';
+const START_PAGE_BGM_RAW_FILE: string = '开始页面音乐.mp3';
+const GAME_BGM_RAW_FILE: string = '背景音乐.mp3';
+const CLEAR_SOUND_RAW_FILE: string = '通关音效.mp3';
 
 PersistentStorage.persistProp(SAVE_KEY, DEFAULT_SAVE_DATA_TEXT);
 
@@ -25,6 +32,7 @@ interface LevelRecord {
   bestMoves: number;
   bestPushes: number;
   bestStars: number;
+  attemptCount: number;
 }
 
 interface SaveData {
@@ -36,7 +44,7 @@ interface SaveData {
 @Component
 struct Index {
   @StorageLink(SAVE_KEY) saveDataText: string = DEFAULT_SAVE_DATA_TEXT;
-  @State currentView: number = VIEW_HOME;
+  @State currentView: number = VIEW_START;
   @State layoutWidth: number = 0;
   @State levelIndex: number = 0;
   @State boardWidth: number = 0;
@@ -52,72 +60,92 @@ struct Index {
   @State history: string[] = [];
   @State isCleared: boolean = false;
   @State lastClearStars: number = 0;
+  @State clearOverlayProgress: number = 0;
   @State statusText: string = '欢迎来到蜗牛推箱子。';
   @State statusTone: number = 0;
+  private bgmPlayer: media.AVPlayer | undefined = undefined;
+  private bgmPreparing: boolean = false;
+  private bgmRawFileOpened: boolean = false;
+  private bgmRawFileName: string = '';
+  private bgmPausedForClearSound: boolean = false;
+  private bgmRequestToken: number = 0;
+  private clearSoundPlayer: media.AVPlayer | undefined = undefined;
+  private clearSoundPreparing: boolean = false;
+  private clearSoundRawFileOpened: boolean = false;
 
   aboutToAppear(): void {
     this.ensureSaveData();
     this.loadLevel(this.readSaveData().lastPlayedLevelIndex);
-    this.currentView = VIEW_HOME;
+    this.currentView = VIEW_START;
     this.setStatus('选择任意关卡，帮蜗牛把补给箱慢慢送回荷叶码头。', 0);
+    this.startBackgroundMusic(START_PAGE_BGM_RAW_FILE);
+  }
+
+  aboutToDisappear(): void {
+    this.releaseClearSoundEffect(false);
+    this.stopBackgroundMusic();
   }
 
   build() {
-    Scroll() {
-      Column({ space: this.currentView === VIEW_HOME ? 20 : 18 }) {
-        if (this.currentView === VIEW_HOME) {
-          this.homeHeroCard()
-          this.levelOverviewCard()
-          this.featureCard()
-        } else {
-          this.playHeader()
-          if (this.isCompactLayout()) {
-            Column({ space: 16 }) {
-              this.boardCard()
-              this.controlCard()
-              this.levelRailCard()
-              this.ruleCard()
-            }
-            .width('100%')
+    if (this.currentView === VIEW_START) {
+      this.startPage()
+    } else {
+      Scroll() {
+        Column({ space: this.currentView === VIEW_HOME ? 20 : 18 }) {
+          if (this.currentView === VIEW_HOME) {
+            this.homeHeroCard()
+            this.levelOverviewCard()
+            this.featureCard()
           } else {
-            Row({ space: 18 }) {
-              Column({ space: 16 }) {
-                this.controlCard()
-                this.ruleCard()
-              }
-              .width('31%')
-
+            this.playHeader()
+            if (this.isCompactLayout()) {
               Column({ space: 16 }) {
                 this.boardCard()
-              }
-              .layoutWeight(1)
-
-              Column({ space: 16 }) {
+                this.controlCard()
                 this.levelRailCard()
+                this.ruleCard()
               }
-              .width('28%')
+              .width('100%')
+            } else {
+              Row({ space: 18 }) {
+                Column({ space: 16 }) {
+                  this.controlCard()
+                  this.ruleCard()
+                }
+                .width('31%')
+
+                Column({ space: 16 }) {
+                  this.boardCard()
+                }
+                .layoutWeight(1)
+
+                Column({ space: 16 }) {
+                  this.levelRailCard()
+                }
+                .width('28%')
+              }
+              .width('100%')
+              .alignItems(VerticalAlign.Top)
             }
-            .width('100%')
-            .alignItems(VerticalAlign.Top)
           }
         }
+        .width('100%')
+        .padding(this.currentView === VIEW_HOME ? 18 : this.isCompactLayout() ? 14 : 20)
       }
       .width('100%')
-      .padding(this.currentView === VIEW_HOME ? 18 : this.isCompactLayout() ? 14 : 20)
+      .height('100%')
+      .id(GAME_FOCUS_ID)
+      .focusable(true)
+      .defaultFocus(true)
+      .backgroundColor('#10261C')
+      .scrollBar(BarState.Auto)
+      .onAppear(() => this.focusGameRoot())
+      .onClick(() => this.focusGameRoot())
+      .onKeyEvent((event?: KeyEvent) => this.handleKeyboardEvent(event))
+      .onAreaChange((oldValue, newValue) => {
+        this.updateLayoutWidth(newValue.width as number | string);
+      })
     }
-    .width('100%')
-    .height('100%')
-    .id(GAME_FOCUS_ID)
-    .focusable(true)
-    .defaultFocus(true)
-    .backgroundColor('#10261C')
-    .scrollBar(BarState.Auto)
-    .onAppear(() => this.focusGameRoot())
-    .onClick(() => this.focusGameRoot())
-    .onKeyEvent((event?: KeyEvent) => this.handleKeyboardEvent(event))
-    .onAreaChange((oldValue, newValue) => {
-      this.updateLayoutWidth(newValue.width as number | string);
-    })
   }
 
   private loadLevel(index: number): void {
@@ -139,12 +167,15 @@ struct Index {
     this.history = [];
     this.isCleared = false;
     this.lastClearStars = this.bestStarsForLevel(nextIndex);
+    this.clearOverlayProgress = 0;
     this.updateLastPlayedLevel(nextIndex);
     this.setStatus(level.hint, 0);
   }
 
-  private openLevel(levelIndex: number): void {
-    this.loadLevel(levelIndex);
+  private openLevel(requestedLevelIndex: number): void {
+    const targetLevelIndex = this.safeLevelIndex(requestedLevelIndex);
+    this.persistChallengeRecord(targetLevelIndex);
+    this.loadLevel(targetLevelIndex);
     this.currentView = VIEW_PLAY;
     this.focusGameRoot();
   }
@@ -206,8 +237,13 @@ struct Index {
   private handleLevelCleared(moves: number, pushes: number): void {
     const stars = this.starRating(this.levelIndex, moves);
     this.lastClearStars = stars;
+    this.clearOverlayProgress = 0;
     this.deadlockedBoxKeys = [];
     this.persistClearRecord(this.levelIndex, moves, pushes, stars);
+    this.playClearSoundEffect();
+    animateTo({ duration: 360, curve: Curve.EaseOut }, () => {
+      this.clearOverlayProgress = 1;
+    });
 
     if (this.completedLevelCount() === SNAIL_LEVELS.length) {
       this.setStatus(`全关卡完成：共 ${moves} 步通关当前关，战役已经全部打通。`, 1);
@@ -230,6 +266,7 @@ struct Index {
     this.moveCount = previous.moveCount;
     this.pushCount = previous.pushCount;
     this.isCleared = isLevelSolved(previous.boxKeys, this.goalKeys);
+    this.clearOverlayProgress = this.isCleared ? 1 : 0;
     this.deadlockedBoxKeys = getDeadlockedBoxKeys(this.boxKeys, this.wallKeys, this.goalKeys, this.floorKeys);
 
     if (this.deadlockedBoxKeys.length > 0) {
@@ -263,6 +300,12 @@ struct Index {
     this.openLevel(this.levelIndex - 1);
   }
 
+  private startGame(): void {
+    this.currentView = VIEW_HOME;
+    this.setStatus('选择任意关卡，帮蜗牛把补给箱慢慢送回荷叶码头。', 0);
+    this.switchBackgroundMusic(GAME_BGM_RAW_FILE);
+  }
+
   private handleKeyboardEvent(event?: KeyEvent): void {
     if (!event || this.currentView !== VIEW_PLAY || event.type !== KeyType.Down) {
       return;
@@ -284,6 +327,368 @@ struct Index {
       this.getUIContext().getFocusController().requestFocus(GAME_FOCUS_ID);
     } catch (error) {
     }
+  }
+
+  private startBackgroundMusic(rawFileName: string): void {
+    if ((this.bgmPlayer || this.bgmPreparing) && this.bgmRawFileName === rawFileName) {
+      return;
+    }
+
+    const requestToken = this.bgmRequestToken + 1;
+    this.bgmRequestToken = requestToken;
+    this.prepareBackgroundMusic(rawFileName, requestToken);
+  }
+
+  private switchBackgroundMusic(rawFileName: string): void {
+    if ((this.bgmPlayer || this.bgmPreparing) && this.bgmRawFileName === rawFileName) {
+      return;
+    }
+
+    const requestToken = this.bgmRequestToken + 1;
+    this.bgmRequestToken = requestToken;
+    this.releaseBackgroundMusic();
+    this.prepareBackgroundMusic(rawFileName, requestToken);
+  }
+
+  private stopBackgroundMusic(): void {
+    this.bgmRequestToken += 1;
+    this.releaseBackgroundMusic();
+  }
+
+  private prepareBackgroundMusic(rawFileName: string, requestToken: number): void {
+    if (requestToken !== this.bgmRequestToken) {
+      return;
+    }
+
+    this.bgmRawFileName = rawFileName;
+    this.bgmPreparing = true;
+    try {
+      const context = getContext(this) as common.UIAbilityContext;
+      context.resourceManager.getRawFd(rawFileName)
+        .then((rawFd: resourceManager.RawFileDescriptor) => {
+          if (requestToken !== this.bgmRequestToken) {
+            this.closeRawFileFd(rawFileName);
+            return;
+          }
+          this.bgmRawFileOpened = true;
+          const source: media.AVFileDescriptor = {
+            fd: rawFd.fd,
+            offset: rawFd.offset,
+            length: rawFd.length
+          };
+          return media.createAVPlayer()
+            .then((player: media.AVPlayer) => {
+              if (requestToken !== this.bgmRequestToken) {
+                player.release()
+                  .then(() => this.closeRawFileFd(rawFileName))
+                  .catch(() => this.closeRawFileFd(rawFileName));
+                return;
+              }
+              this.bgmPlayer = player;
+              try {
+                player.on('stateChange', (state: media.AVPlayerState, reason: media.StateChangeReason) => {
+                  this.handleBackgroundMusicState(player, state, reason);
+                });
+                player.on('error', () => {
+                  if (player === this.bgmPlayer) {
+                    this.releaseBackgroundMusic();
+                  }
+                });
+                player.fdSrc = source;
+              } catch (error) {
+                if (player === this.bgmPlayer) {
+                  this.releaseBackgroundMusic();
+                }
+              }
+            })
+            .catch(() => {
+              if (requestToken === this.bgmRequestToken) {
+                this.releaseBackgroundMusic();
+              }
+            });
+        })
+        .catch(() => {
+          if (requestToken === this.bgmRequestToken) {
+            this.releaseBackgroundMusic();
+          }
+        });
+    } catch (error) {
+      if (requestToken === this.bgmRequestToken) {
+        this.releaseBackgroundMusic();
+      }
+    }
+  }
+
+  private handleBackgroundMusicState(
+    player: media.AVPlayer,
+    state: media.AVPlayerState,
+    reason: media.StateChangeReason
+  ): void {
+    if (player !== this.bgmPlayer) {
+      return;
+    }
+    if (reason === media.StateChangeReason.BACKGROUND && state === 'paused') {
+      this.bgmPreparing = false;
+      return;
+    }
+    if (state === 'initialized') {
+      player.prepare().catch(() => {
+        if (player === this.bgmPlayer) {
+          this.releaseBackgroundMusic();
+        }
+      });
+      return;
+    }
+    if (state !== 'prepared') {
+      return;
+    }
+
+    this.bgmPreparing = false;
+    try {
+      player.loop = true;
+      player.setVolume(0.35);
+      player.play().catch(() => {
+        if (player === this.bgmPlayer) {
+          this.releaseBackgroundMusic();
+        }
+      });
+    } catch (error) {
+      this.releaseBackgroundMusic();
+    }
+  }
+
+  private releaseBackgroundMusic(): Promise<void> {
+    const player = this.bgmPlayer;
+    const rawFileName = this.bgmRawFileOpened ? this.bgmRawFileName : '';
+    this.bgmPlayer = undefined;
+    this.bgmPreparing = false;
+    this.bgmRawFileOpened = false;
+    this.bgmRawFileName = '';
+    this.bgmPausedForClearSound = false;
+    if (!player) {
+      return this.closeRawFileFd(rawFileName);
+    }
+
+    try {
+      return player.release()
+        .then(() => this.closeRawFileFd(rawFileName))
+        .catch(() => this.closeRawFileFd(rawFileName));
+    } catch (error) {
+      return this.closeRawFileFd(rawFileName);
+    }
+  }
+
+  private closeRawFileFd(rawFileName: string): Promise<void> {
+    if (rawFileName.length === 0) {
+      return Promise.resolve();
+    }
+
+    try {
+      const context = getContext(this) as common.UIAbilityContext;
+      return context.resourceManager.closeRawFd(rawFileName).catch(() => {
+      });
+    } catch (error) {
+      return Promise.resolve();
+    }
+  }
+
+  private pauseBackgroundMusicForClearSound(): Promise<void> {
+    if (this.bgmPausedForClearSound) {
+      return Promise.resolve();
+    }
+
+    const player = this.bgmPlayer;
+    if (!player) {
+      return Promise.resolve();
+    }
+
+    try {
+      if (player.state !== 'playing') {
+        return Promise.resolve();
+      }
+      this.bgmPausedForClearSound = true;
+      return player.pause().catch(() => {
+        this.bgmPausedForClearSound = false;
+      });
+    } catch (error) {
+      this.bgmPausedForClearSound = false;
+      return Promise.resolve();
+    }
+  }
+
+  private resumeBackgroundMusicAfterClearSound(): void {
+    if (!this.bgmPausedForClearSound) {
+      return;
+    }
+
+    this.bgmPausedForClearSound = false;
+    const player = this.bgmPlayer;
+    if (!player) {
+      return;
+    }
+
+    try {
+      if (player.state !== 'paused' && player.state !== 'prepared' && player.state !== 'completed') {
+        return;
+      }
+      player.play().catch(() => {
+      });
+    } catch (error) {
+    }
+  }
+
+  private playClearSoundEffect(): void {
+    if (this.clearSoundPlayer || this.clearSoundPreparing) {
+      return;
+    }
+
+    this.clearSoundPreparing = true;
+    this.pauseBackgroundMusicForClearSound()
+      .then(() => this.prepareClearSoundEffect())
+      .catch(() => this.prepareClearSoundEffect());
+  }
+
+  private prepareClearSoundEffect(): void {
+    if (!this.clearSoundPreparing) {
+      return;
+    }
+
+    try {
+      const context = getContext(this) as common.UIAbilityContext;
+      context.resourceManager.getRawFd(CLEAR_SOUND_RAW_FILE)
+        .then((rawFd: resourceManager.RawFileDescriptor) => {
+          this.clearSoundRawFileOpened = true;
+          const source: media.AVFileDescriptor = {
+            fd: rawFd.fd,
+            offset: rawFd.offset,
+            length: rawFd.length
+          };
+          return media.createAVPlayer()
+            .then((player: media.AVPlayer) => {
+              this.clearSoundPlayer = player;
+              try {
+                player.on('stateChange', (state: media.AVPlayerState, reason: media.StateChangeReason) => {
+                  this.handleClearSoundState(player, state, reason);
+                });
+                player.on('error', () => this.releaseClearSoundEffect());
+                player.fdSrc = source;
+              } catch (error) {
+                this.releaseClearSoundEffect();
+              }
+            })
+            .catch(() => {
+              this.releaseClearSoundEffect();
+            });
+        })
+        .catch(() => {
+          this.releaseClearSoundEffect();
+        });
+    } catch (error) {
+      this.releaseClearSoundEffect();
+    }
+  }
+
+  private handleClearSoundState(
+    player: media.AVPlayer,
+    state: media.AVPlayerState,
+    reason: media.StateChangeReason
+  ): void {
+    if (reason === media.StateChangeReason.BACKGROUND && state === 'paused') {
+      this.clearSoundPreparing = false;
+      return;
+    }
+    if (state === 'initialized') {
+      player.prepare().catch(() => this.releaseClearSoundEffect());
+      return;
+    }
+    if (state === 'completed') {
+      this.releaseClearSoundEffect();
+      return;
+    }
+    if (state !== 'prepared') {
+      return;
+    }
+
+    this.clearSoundPreparing = false;
+    try {
+      player.loop = false;
+      player.setVolume(0.85);
+      player.play().catch(() => this.releaseClearSoundEffect());
+    } catch (error) {
+      this.releaseClearSoundEffect();
+    }
+  }
+
+  private releaseClearSoundEffect(resumeBackgroundMusic: boolean = true): void {
+    const player = this.clearSoundPlayer;
+    this.clearSoundPlayer = undefined;
+    this.clearSoundPreparing = false;
+    if (!player) {
+      this.finishClearSoundRelease(resumeBackgroundMusic);
+      return;
+    }
+
+    try {
+      player.release()
+        .then(() => this.finishClearSoundRelease(resumeBackgroundMusic))
+        .catch(() => this.finishClearSoundRelease(resumeBackgroundMusic));
+    } catch (error) {
+      this.finishClearSoundRelease(resumeBackgroundMusic);
+    }
+  }
+
+  private finishClearSoundRelease(resumeBackgroundMusic: boolean): void {
+    this.closeClearSoundFd();
+    if (resumeBackgroundMusic) {
+      this.resumeBackgroundMusicAfterClearSound();
+    }
+  }
+
+  private closeClearSoundFd(): void {
+    if (!this.clearSoundRawFileOpened) {
+      return;
+    }
+
+    this.clearSoundRawFileOpened = false;
+    try {
+      const context = getContext(this) as common.UIAbilityContext;
+      context.resourceManager.closeRawFd(CLEAR_SOUND_RAW_FILE).catch(() => {
+      });
+    } catch (error) {
+    }
+  }
+
+  @Builder
+  private startPage() {
+    Stack({ alignContent: Alignment.Bottom }) {
+      Image($r('app.media.start_page'))
+        .width('100%')
+        .height('100%')
+        .objectFit(ImageFit.Cover)
+
+      Column() {
+        Button('开始游戏')
+          .fontSize(24)
+          .fontWeight(FontWeight.Bold)
+          .fontColor('#3A2407')
+          .backgroundColor('#FFD76A')
+          .border({ width: 2, color: '#8A4E14' })
+          .borderRadius(18)
+          .width('68%')
+          .height(58)
+          .shadow({ radius: 14, color: '#00000044', offsetX: 0, offsetY: 6 })
+          .onClick(() => this.startGame())
+      }
+      .width('100%')
+      .alignItems(HorizontalAlign.Center)
+      .margin({ bottom: this.isCompactLayout() ? 56 : 80 })
+    }
+    .width('100%')
+    .height('100%')
+    .backgroundColor('#10261C')
+    .onAreaChange((oldValue, newValue) => {
+      this.updateLayoutWidth(newValue.width as number | string);
+    })
   }
 
   @Builder
@@ -424,9 +829,13 @@ struct Index {
           Row({ space: 10 }) {
             Button('返回总览')
               .fontSize(14)
+              .fontWeight(FontWeight.Bold)
               .fontColor('#FFFFFF')
               .backgroundColor('#2D4C3B')
-              .borderRadius(14)
+              .border({ width: 1, color: '#E6D5A844' })
+              .borderRadius(16)
+              .height(42)
+              .shadow({ radius: 8, color: '#00000024', offsetX: 0, offsetY: 3 })
               .onClick(() => this.returnHome())
 
             this.pill(`第 ${this.levelIndex + 1} 关`, '#7A4D2C')
@@ -441,9 +850,13 @@ struct Index {
         Row({ space: 10 }) {
           Button('返回总览')
             .fontSize(14)
+            .fontWeight(FontWeight.Bold)
             .fontColor('#FFFFFF')
             .backgroundColor('#2D4C3B')
-            .borderRadius(14)
+            .border({ width: 1, color: '#E6D5A844' })
+            .borderRadius(16)
+            .height(42)
+            .shadow({ radius: 8, color: '#00000024', offsetX: 0, offsetY: 3 })
             .onClick(() => this.returnHome())
 
           this.pill(`第 ${this.levelIndex + 1} 关`, '#7A4D2C')
@@ -496,7 +909,19 @@ struct Index {
         .fontWeight(FontWeight.Bold)
         .fontColor('#241C14')
 
-      this.infoRow('关卡', `${this.levelIndex + 1} / ${SNAIL_LEVELS.length}`)
+      Row({ space: 8 }) {
+        this.actionButton('上一关', '#6A5A47', this.levelIndex > 0, () => this.previousLevel())
+        this.actionButton('下一关', '#2F6A4B', this.canEnterNextLevel(), () => this.nextLevel())
+      }
+      .width('100%')
+
+      Row({ space: 8 }) {
+        this.actionButton('撤销', '#8A633C', this.history.length > 0, () => this.undoMove())
+        this.actionButton('重开', '#A04F2F', true, () => this.resetLevel())
+      }
+      .width('100%')
+
+      this.currentLevelInfoRow()
       this.infoRow('步数', `${this.moveCount}`)
       this.infoRow('推箱', `${this.pushCount}`)
       this.infoRow('完成度', this.coveredGoalsText())
@@ -511,23 +936,29 @@ struct Index {
         .padding(14)
         .backgroundColor(this.statusBackgroundColor())
         .borderRadius(14)
-
-      Row({ space: 8 }) {
-        this.actionButton('上一关', '#6A5A47', this.levelIndex > 0, () => this.previousLevel())
-        this.actionButton('下一关', '#2F6A4B', this.canEnterNextLevel(), () => this.nextLevel())
-      }
-      .width('100%')
-
-      Row({ space: 8 }) {
-        this.actionButton('撤销', '#8A633C', this.history.length > 0, () => this.undoMove())
-        this.actionButton('重开', '#A04F2F', true, () => this.resetLevel())
-      }
-      .width('100%')
     }
     .width('100%')
     .padding(18)
     .backgroundColor('#F1E4CD')
     .borderRadius(22)
+  }
+
+  @Builder
+  private currentLevelInfoRow() {
+    Row({ space: 12 }) {
+      Text('关卡')
+        .fontSize(13)
+        .fontColor('#6B5B48')
+        .width(74)
+
+      Text(`第 ${this.levelIndex + 1} / ${SNAIL_LEVELS.length} 关 · ${this.currentLevel().name}`)
+        .fontSize(13)
+        .fontWeight(FontWeight.Medium)
+        .fontColor('#241C14')
+        .layoutWeight(1)
+        .textAlign(TextAlign.End)
+    }
+    .width('100%')
   }
 
   @Builder
@@ -597,32 +1028,7 @@ struct Index {
         .borderRadius(22)
 
         if (this.isCleared) {
-          Column({ space: 10 }) {
-            Text('关卡完成')
-              .fontSize(28)
-              .fontWeight(FontWeight.Bold)
-              .fontColor('#FFF6E6')
-
-            Text(this.clearOverlayLabel())
-              .fontSize(14)
-              .lineHeight(22)
-              .fontColor('#E8F6E8')
-              .textAlign(TextAlign.Center)
-
-            Row({ space: 8 }) {
-              this.overlayButton(this.hasNextLevel() ? '下一关' : '回到总览', '#2E7A52', true, () => {
-                if (this.hasNextLevel()) {
-                  this.nextLevel();
-                } else {
-                  this.returnHome();
-                }
-              })
-              this.overlayButton('重玩本关', '#A05A33', true, () => this.resetLevel())
-            }
-          }
-          .padding({ left: 24, right: 24, top: 20, bottom: 20 })
-          .backgroundColor('#163927EE')
-          .borderRadius(20)
+          this.clearOverlay()
         }
       }
       .width('100%')
@@ -642,6 +1048,52 @@ struct Index {
     .padding(18)
     .backgroundColor('#173126')
     .borderRadius(24)
+  }
+
+  @Builder
+  private clearOverlay() {
+    Column({ space: 12 }) {
+      Text('关卡完成')
+        .fontSize(28)
+        .fontWeight(FontWeight.Bold)
+        .fontColor('#FFF6E6')
+
+      Row({ space: 6 }) {
+        ForEach([0, 1, 2], (starIndex: number) => {
+          Text('★')
+            .fontSize(26)
+            .fontWeight(FontWeight.Bold)
+            .fontColor(starIndex < this.lastClearStars ? '#FFD86A' : '#6D7A5A')
+            .opacity(this.clearOverlayStarOpacity(starIndex))
+        }, (starIndex: number) => `clear-star-${starIndex}`)
+      }
+      .justifyContent(FlexAlign.Center)
+
+      Text(this.clearOverlayLabel())
+        .fontSize(14)
+        .lineHeight(22)
+        .fontColor('#E8F6E8')
+        .textAlign(TextAlign.Center)
+
+      Row({ space: 8 }) {
+        this.overlayButton(this.hasNextLevel() ? '下一关' : '回到总览', '#2E7A52', true, () => {
+          if (this.hasNextLevel()) {
+            this.nextLevel();
+          } else {
+            this.returnHome();
+          }
+        })
+        this.overlayButton('重玩本关', '#A05A33', true, () => this.resetLevel())
+      }
+    }
+    .padding({ left: 24, right: 24, top: 22, bottom: 22 })
+    .backgroundColor('#163927F2')
+    .border({ width: 1, color: '#9CD78A66' })
+    .borderRadius(20)
+    .opacity(this.clearOverlayOpacity())
+    .scale({ x: this.clearOverlayScale(), y: this.clearOverlayScale() })
+    .translate({ y: this.clearOverlayTranslateY() })
+    .shadow({ radius: 20, color: '#00000055', offsetX: 0, offsetY: 8 })
   }
 
   @Builder
@@ -813,20 +1265,30 @@ struct Index {
       Column() {
         Blank()
       }
-      .width(size * 0.7)
-      .height(size * 0.7)
-      .backgroundColor('#AACD72')
-      .opacity(0.26)
-      .border({ width: 3, color: '#587A32' })
-      .borderRadius(size * 0.35)
+      .width(size * 0.76)
+      .height(size * 0.48)
+      .backgroundColor('#7FBF58')
+      .opacity(0.52)
+      .border({ width: 2, color: '#3E7635' })
+      .borderRadius(size * 0.28)
 
       Column() {
         Blank()
       }
-      .width(size * 0.22)
-      .height(size * 0.22)
-      .backgroundColor('#587A32')
-      .borderRadius(size * 0.11)
+      .width(size * 0.44)
+      .height(size * 0.06)
+      .backgroundColor('#E6F5A6')
+      .opacity(0.7)
+      .borderRadius(999)
+
+      Column() {
+        Blank()
+      }
+      .width(size * 0.14)
+      .height(size * 0.14)
+      .backgroundColor('#F6D36C')
+      .border({ width: 1, color: '#8A6A23' })
+      .borderRadius(size * 0.07)
     }
   }
 
@@ -836,19 +1298,43 @@ struct Index {
       Column() {
         Blank()
       }
-      .width(size * 0.7)
-      .height(size * 0.7)
+      .width(size * 0.74)
+      .height(size * 0.74)
       .backgroundColor(deadlocked ? '#B55B45' : onGoal ? '#D9AE47' : '#B87B35')
       .border({ width: 2, color: deadlocked ? '#6E2D1E' : onGoal ? '#7A5A16' : '#744918' })
-      .borderRadius(10)
+      .borderRadius(9)
 
       Column() {
         Blank()
       }
-      .width(size * 0.36)
+      .width(size * 0.68)
       .height(size * 0.12)
-      .backgroundColor('#FFF5DB')
-      .borderRadius(999)
+      .backgroundColor(deadlocked ? '#E2A091' : '#F6D089')
+      .opacity(0.8)
+      .borderRadius(4)
+
+      Row({ space: 0 }) {
+        Blank()
+          .width(size * 0.12)
+          .height(size * 0.66)
+          .backgroundColor(deadlocked ? '#8A3A2C' : '#8B5420')
+          .opacity(0.72)
+        Blank()
+          .width(size * 0.16)
+          .height(size * 0.66)
+          .opacity(0)
+        Blank()
+          .width(size * 0.12)
+          .height(size * 0.66)
+          .backgroundColor(deadlocked ? '#8A3A2C' : '#8B5420')
+          .opacity(0.72)
+      }
+
+      Text('X')
+        .fontSize(size * 0.42)
+        .fontWeight(FontWeight.Bold)
+        .fontColor(deadlocked ? '#FFE7DA' : '#5C3517')
+        .opacity(deadlocked ? 0.82 : 0.42)
 
       if (deadlocked) {
         Text('!')
@@ -861,46 +1347,71 @@ struct Index {
 
   @Builder
   private snailToken(size: number) {
-    Row({ space: size * 0.04 }) {
+    Row({ space: size * 0.02 }) {
       Stack() {
         Column() {
           Blank()
         }
-        .width(size * 0.38)
-        .height(size * 0.38)
+        .width(size * 0.42)
+        .height(size * 0.42)
         .backgroundColor('#7B4324')
-        .borderRadius(size * 0.19)
+        .border({ width: 2, color: '#4A2817' })
+        .borderRadius(size * 0.21)
 
         Column() {
           Blank()
         }
-        .width(size * 0.16)
-        .height(size * 0.16)
+        .width(size * 0.26)
+        .height(size * 0.26)
+        .border({ width: 2, color: '#DDA857' })
+        .borderRadius(size * 0.13)
+
+        Column() {
+          Blank()
+        }
+        .width(size * 0.1)
+        .height(size * 0.1)
         .backgroundColor('#F8DC97')
-        .borderRadius(size * 0.08)
+        .borderRadius(size * 0.05)
       }
 
-      Column({ space: size * 0.04 }) {
+      Column({ space: size * 0.02 }) {
+        Row({ space: size * 0.14 }) {
+          Blank()
+            .width(size * 0.04)
+            .height(size * 0.2)
+            .backgroundColor('#F1B75C')
+            .borderRadius(999)
+          Blank()
+            .width(size * 0.04)
+            .height(size * 0.2)
+            .backgroundColor('#F1B75C')
+            .borderRadius(999)
+        }
+        .height(size * 0.14)
+
         Blank()
-          .width(size * 0.3)
-          .height(size * 0.18)
+          .width(size * 0.34)
+          .height(size * 0.2)
           .backgroundColor('#E39E3F')
-          .borderRadius(size * 0.08)
+          .border({ width: 1, color: '#9F6123' })
+          .borderRadius(size * 0.1)
 
         Row({ space: size * 0.05 }) {
           Blank()
-            .width(size * 0.05)
-            .height(size * 0.05)
+            .width(size * 0.06)
+            .height(size * 0.06)
             .backgroundColor('#241C14')
-            .borderRadius(size * 0.025)
+            .borderRadius(size * 0.03)
           Blank()
-            .width(size * 0.05)
-            .height(size * 0.05)
+            .width(size * 0.06)
+            .height(size * 0.06)
             .backgroundColor('#241C14')
-            .borderRadius(size * 0.025)
+            .borderRadius(size * 0.03)
         }
       }
     }
+    .padding({ left: size * 0.06, right: size * 0.04 })
   }
 
   @Builder
@@ -1003,10 +1514,12 @@ struct Index {
         .fontWeight(FontWeight.Bold)
         .fontColor('#FFFFFF')
         .backgroundColor(color)
+        .border({ width: 1, color: '#FFF4CF55' })
         .borderRadius(16)
         .width('100%')
         .height(48)
         .opacity(enabled ? 1 : 0.4)
+        .shadow({ radius: 10, color: '#00000033', offsetX: 0, offsetY: 4 })
         .onClick(() => {
           if (enabled) {
             handler();
@@ -1018,10 +1531,12 @@ struct Index {
         .fontWeight(FontWeight.Bold)
         .fontColor('#FFFFFF')
         .backgroundColor(color)
+        .border({ width: 1, color: '#FFF4CF55' })
         .borderRadius(16)
         .layoutWeight(1)
         .height(48)
         .opacity(enabled ? 1 : 0.4)
+        .shadow({ radius: 10, color: '#00000033', offsetX: 0, offsetY: 4 })
         .onClick(() => {
           if (enabled) {
             handler();
@@ -1034,12 +1549,15 @@ struct Index {
   private actionButton(label: string, color: string, enabled: boolean, handler: () => void) {
     Button(label)
       .fontSize(14)
+      .fontWeight(FontWeight.Bold)
       .fontColor('#FFFFFF')
       .backgroundColor(color)
-      .borderRadius(14)
+      .border({ width: 1, color: '#FFF4CF44' })
+      .borderRadius(16)
       .layoutWeight(1)
       .height(44)
       .opacity(enabled ? 1 : 0.4)
+      .shadow({ radius: 8, color: '#0000002E', offsetX: 0, offsetY: 3 })
       .onClick(() => {
         if (enabled) {
           handler();
@@ -1051,11 +1569,15 @@ struct Index {
   private overlayButton(label: string, color: string, enabled: boolean, handler: () => void) {
     Button(label)
       .fontSize(14)
+      .fontWeight(FontWeight.Bold)
       .fontColor('#FFFFFF')
       .backgroundColor(color)
-      .borderRadius(14)
+      .border({ width: 1, color: '#FFF4CF44' })
+      .borderRadius(16)
       .layoutWeight(1)
+      .height(44)
       .opacity(enabled ? 1 : 0.4)
+      .shadow({ radius: 8, color: '#00000033', offsetX: 0, offsetY: 3 })
       .onClick(() => {
         if (enabled) {
           handler();
@@ -1070,9 +1592,11 @@ struct Index {
       .fontWeight(FontWeight.Bold)
       .fontColor('#FFFFFF')
       .backgroundColor('#4B6F40')
+      .border({ width: 1, color: '#DCE9B855' })
       .width(72)
       .height(48)
-      .borderRadius(14)
+      .borderRadius(16)
+      .shadow({ radius: 7, color: '#0000002A', offsetX: 0, offsetY: 3 })
       .onClick(() => handler())
   }
 
@@ -1162,6 +1686,7 @@ struct Index {
       const bestMoves = Number(item.bestMoves);
       const bestPushes = Number(item.bestPushes);
       const bestStars = Number(item.bestStars);
+      const attemptCount = Number(item.attemptCount);
       if (Number.isNaN(levelId) || levelId <= 0) {
         continue;
       }
@@ -1169,7 +1694,8 @@ struct Index {
         levelId,
         bestMoves: Number.isNaN(bestMoves) || bestMoves <= 0 ? 0 : bestMoves,
         bestPushes: Number.isNaN(bestPushes) || bestPushes <= 0 ? 0 : bestPushes,
-        bestStars: Number.isNaN(bestStars) || bestStars <= 0 ? 0 : bestStars
+        bestStars: Number.isNaN(bestStars) || bestStars <= 0 ? 0 : bestStars,
+        attemptCount: Number.isNaN(attemptCount) || attemptCount <= 0 ? 1 : attemptCount
       });
     }
 
@@ -1192,6 +1718,33 @@ struct Index {
     this.writeSaveData(saveData);
   }
 
+  private persistChallengeRecord(levelIndex: number): void {
+    const saveData = this.readSaveData();
+    saveData.lastPlayedLevelIndex = levelIndex;
+
+    const levelId = SNAIL_LEVELS[levelIndex].id;
+    let matched = false;
+    for (let recordIndex = 0; recordIndex < saveData.records.length; recordIndex++) {
+      if (saveData.records[recordIndex].levelId !== levelId) {
+        continue;
+      }
+      matched = true;
+      saveData.records[recordIndex].attemptCount += 1;
+    }
+
+    if (!matched) {
+      saveData.records.push({
+        levelId,
+        bestMoves: 0,
+        bestPushes: 0,
+        bestStars: 0,
+        attemptCount: 1
+      });
+    }
+
+    this.writeSaveData(saveData);
+  }
+
   private persistClearRecord(levelIndex: number, moves: number, pushes: number, stars: number): void {
     const saveData = this.readSaveData();
     saveData.lastPlayedLevelIndex = levelIndex;
@@ -1207,6 +1760,7 @@ struct Index {
       record.bestMoves = record.bestMoves === 0 ? moves : Math.min(record.bestMoves, moves);
       record.bestPushes = record.bestPushes === 0 ? pushes : Math.min(record.bestPushes, pushes);
       record.bestStars = Math.max(record.bestStars, stars);
+      record.attemptCount = Math.max(1, record.attemptCount);
     }
 
     if (!matched) {
@@ -1214,7 +1768,8 @@ struct Index {
         levelId,
         bestMoves: moves,
         bestPushes: pushes,
-        bestStars: stars
+        bestStars: stars,
+        attemptCount: 1
       });
     }
 
@@ -1237,6 +1792,17 @@ struct Index {
   }
 
   private completedLevelCount(): number {
+    let count = 0;
+    const records = this.readSaveData().records;
+    for (let index = 0; index < records.length; index++) {
+      if (this.isClearedRecord(records[index])) {
+        count += 1;
+      }
+    }
+    return count;
+  }
+
+  private challengedLevelCount(): number {
     return this.readSaveData().records.length;
   }
 
@@ -1266,11 +1832,14 @@ struct Index {
     if (!record) {
       return `${this.totalStarCount()} 星`;
     }
+    if (!this.isClearedRecord(record)) {
+      return `挑战 ${record.attemptCount} 次`;
+    }
     return `${record.bestMoves} 步`;
   }
 
   private campaignSummaryText(): string {
-    return `已完成 ${this.completedLevelCount()} / ${SNAIL_LEVELS.length} 关，累计评级 ${this.totalStarCount()} / ${SNAIL_LEVELS.length * 3} 星。`;
+    return `已挑战 ${this.challengedLevelCount()} / ${SNAIL_LEVELS.length} 关，已完成 ${this.completedLevelCount()} / ${SNAIL_LEVELS.length} 关，累计评级 ${this.totalStarCount()} / ${SNAIL_LEVELS.length * 3} 星。`;
   }
 
   private levelGoalCount(levelIndex: number): number {
@@ -1280,7 +1849,10 @@ struct Index {
   private levelRecordShortLabel(levelIndex: number): string {
     const record = this.findRecordForLevel(levelIndex);
     if (!record) {
-      return '待完成';
+      return '未挑战';
+    }
+    if (!this.isClearedRecord(record)) {
+      return `挑战 ${record.attemptCount} 次`;
     }
     return `${record.bestStars} 星`;
   }
@@ -1288,7 +1860,10 @@ struct Index {
   private currentBestLabel(): string {
     const record = this.findRecordForLevel(this.levelIndex);
     if (!record) {
-      return '尚未通关';
+      return '尚未挑战';
+    }
+    if (!this.isClearedRecord(record)) {
+      return `已挑战 ${record.attemptCount} 次`;
     }
     return `${record.bestMoves} 步 · ${record.bestStars} 星`;
   }
@@ -1315,12 +1890,24 @@ struct Index {
   }
 
   private isLevelCleared(levelIndex: number): boolean {
+    const record = this.findRecordForLevel(levelIndex);
+    return record !== undefined && this.isClearedRecord(record);
+  }
+
+  private isLevelChallenged(levelIndex: number): boolean {
     return this.findRecordForLevel(levelIndex) !== undefined;
+  }
+
+  private isClearedRecord(record: LevelRecord): boolean {
+    return record.bestStars > 0 && record.bestMoves > 0;
   }
 
   private levelStateLabel(levelIndex: number): string {
     if (this.isLevelCleared(levelIndex)) {
       return '已通关';
+    }
+    if (this.isLevelChallenged(levelIndex)) {
+      return '已挑战';
     }
     return '可挑战';
   }
@@ -1328,6 +1915,9 @@ struct Index {
   private levelStateColor(levelIndex: number): string {
     if (this.isLevelCleared(levelIndex)) {
       return '#2F7A51';
+    }
+    if (this.isLevelChallenged(levelIndex)) {
+      return '#496D7C';
     }
     return '#8B6637';
   }
@@ -1373,6 +1963,26 @@ struct Index {
 
   private clearOverlayLabel(): string {
     return `当前成绩 ${this.moveCount} 步，推箱 ${this.pushCount} 次，评级 ${this.lastClearStars} 星。`;
+  }
+
+  private clearOverlayOpacity(): number {
+    return 0.88 + this.clearOverlayProgress * 0.12;
+  }
+
+  private clearOverlayScale(): number {
+    return 0.92 + this.clearOverlayProgress * 0.08;
+  }
+
+  private clearOverlayTranslateY(): number {
+    return 14 - this.clearOverlayProgress * 14;
+  }
+
+  private clearOverlayStarOpacity(starIndex: number): number {
+    const revealProgress = this.clearOverlayProgress * 3;
+    if (revealProgress >= starIndex + 1) {
+      return 1;
+    }
+    return 0.32;
   }
 
   private boardFooterLabel(): string {
