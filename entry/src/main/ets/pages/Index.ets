@@ -2,6 +2,7 @@ import { common } from '@kit.AbilityKit';
 import { resourceManager } from '@kit.LocalizationKit';
 import { media } from '@kit.MediaKit';
 import { SNAIL_LEVELS, SnailLevel } from '../data/SnailLevels';
+import { Colors, FontSize, Radius, Shadow, Spacing } from '../theme/VisualTheme';
 import { keyboardMoveFromKey } from '../utils/KeyboardMapping';
 import {
   countGoalsCovered,
@@ -91,7 +92,7 @@ struct Index {
       this.startPage()
     } else {
       Scroll() {
-        Column({ space: this.currentView === VIEW_HOME ? 20 : 18 }) {
+        Column({ space: this.currentView === VIEW_HOME ? Spacing.section : 18 }) {
           if (this.currentView === VIEW_HOME) {
             this.homeHeroCard()
             this.levelOverviewCard()
@@ -130,14 +131,14 @@ struct Index {
           }
         }
         .width('100%')
-        .padding(this.currentView === VIEW_HOME ? 18 : this.isCompactLayout() ? 14 : 20)
+        .padding(this.currentView === VIEW_HOME ? Spacing.pageRegular : this.isCompactLayout() ? Spacing.pageCompact : Spacing.pageRegular)
       }
       .width('100%')
       .height('100%')
       .id(GAME_FOCUS_ID)
       .focusable(true)
       .defaultFocus(true)
-      .backgroundColor('#10261C')
+      .backgroundColor(Colors.forestBackground)
       .scrollBar(BarState.Auto)
       .onAppear(() => this.focusGameRoot())
       .onClick(() => this.focusGameRoot())
@@ -667,25 +668,76 @@ struct Index {
         .objectFit(ImageFit.Cover)
 
       Column() {
-        Button('开始游戏')
-          .fontSize(24)
+        Blank()
+          .width('100%')
+          .height('34%')
+          .backgroundColor('#0E241A66')
+
+        Blank()
+          .width('100%')
+          .layoutWeight(1)
+          .backgroundColor('#00000000')
+
+        Blank()
+          .width('100%')
+          .height('44%')
+          .backgroundColor('#0E241ACC')
+      }
+      .width('100%')
+      .height('100%')
+
+      Image($r('app.media.sparkles'))
+        .width(this.isCompactLayout() ? 210 : 320)
+        .height(this.isCompactLayout() ? 110 : 170)
+        .objectFit(ImageFit.Contain)
+        .opacity(0.16)
+        .margin({ bottom: this.isCompactLayout() ? 170 : 220 })
+
+      Image($r('app.media.start_page_decoration'))
+        .width(this.isCompactLayout() ? 150 : 220)
+        .height(this.isCompactLayout() ? 88 : 128)
+        .objectFit(ImageFit.Contain)
+        .opacity(0.38)
+        .margin({ bottom: this.isCompactLayout() ? 22 : 36, right: this.isCompactLayout() ? 210 : 380 })
+
+      Column({ space: 12 }) {
+        Text('慢慢推，也能抵达终点')
+          .fontSize(this.isCompactLayout() ? 22 : 26)
           .fontWeight(FontWeight.Bold)
-          .fontColor('#3A2407')
-          .backgroundColor('#FFD76A')
-          .border({ width: 2, color: '#8A4E14' })
-          .borderRadius(18)
-          .width('68%')
-          .height(58)
-          .shadow({ radius: 14, color: '#00000044', offsetX: 0, offsetY: 6 })
-          .onClick(() => this.startGame())
+          .fontColor(Colors.title)
+          .fontFamily('HarmonyOS Sans SC')
+          .shadow({ radius: 8, color: '#00000055', offsetX: 0, offsetY: 3 })
+
+        Stack() {
+          Image($r('app.media.ui_button_primary'))
+            .width('100%')
+            .height('100%')
+            .objectFit(ImageFit.Fill)
+
+          Text('开始冒险')
+            .fontSize(23)
+            .fontWeight(FontWeight.Bold)
+            .fontColor('#3A2407')
+            .shadow({ radius: 3, color: '#FFF3B866', offsetX: 0, offsetY: 1 })
+        }
+        .width(this.isCompactLayout() ? '72%' : 360)
+        .height(this.isCompactLayout() ? 64 : 70)
+        .margin({ top: 14 })
+        .shadow({ radius: Shadow.primaryRadius, color: Colors.blackPrimaryShadow, offsetX: 0, offsetY: Shadow.primaryOffsetY })
+        .onClick(() => this.startGame())
+
+        Text('支持关卡选择、通关评级和本地记录')
+          .fontSize(13)
+          .fontColor(Colors.body)
+          .opacity(0.88)
       }
       .width('100%')
       .alignItems(HorizontalAlign.Center)
-      .margin({ bottom: this.isCompactLayout() ? 56 : 80 })
+      .margin({ bottom: this.isCompactLayout() ? 54 : 78 })
     }
     .width('100%')
     .height('100%')
-    .backgroundColor('#10261C')
+    .backgroundColor(Colors.forestBackground)
     .onAreaChange((oldValue, newValue) => {
       this.updateLayoutWidth(newValue.width as number | string);
     })
@@ -693,132 +745,156 @@ struct Index {
 
   @Builder
   private homeHeroCard() {
-    Column({ space: 18 }) {
-      if (this.isCompactLayout()) {
-        Column({ space: 8 }) {
+    Stack({ alignContent: Alignment.TopEnd }) {
+      Image($r('app.media.start_page_decoration'))
+        .width(this.isCompactLayout() ? 120 : 190)
+        .height(this.isCompactLayout() ? 72 : 112)
+        .objectFit(ImageFit.Contain)
+        .opacity(0.35)
+        .margin({ top: 10, right: 12 })
+
+      Image($r('app.media.sparkles'))
+        .width(this.isCompactLayout() ? 160 : 240)
+        .height(this.isCompactLayout() ? 90 : 130)
+        .objectFit(ImageFit.Contain)
+        .opacity(0.12)
+        .margin({ top: this.isCompactLayout() ? 118 : 132, right: this.isCompactLayout() ? 168 : 260 })
+
+      Column({ space: 18 }) {
+        if (this.isCompactLayout()) {
+          Column({ space: 8 }) {
+            Row({ space: 8 }) {
+              this.pill('发布版打磨', Colors.warning)
+              this.pill(`${SNAIL_LEVELS.length} 个精选关卡`, Colors.cardDeepAlt)
+            }
+            Row({ space: 8 }) {
+              this.pill('本地进度保存', Colors.successDark)
+            }
+          }
+          .width('100%')
+        } else {
           Row({ space: 8 }) {
-            this.pill('发布版打磨', '#7A4D2C')
-            this.pill(`${SNAIL_LEVELS.length} 个精选关卡`, '#355F46')
+            this.pill('发布版打磨', Colors.warning)
+            this.pill(`${SNAIL_LEVELS.length} 个精选关卡`, Colors.cardDeepAlt)
+            this.pill('本地进度保存', Colors.successDark)
           }
-          Row({ space: 8 }) {
-            this.pill('本地进度保存', '#566F23')
+          .width('100%')
+          .justifyContent(FlexAlign.Start)
+        }
+
+        Text('蜗牛推箱子')
+          .fontSize(this.isCompactLayout() ? FontSize.heroTitleCompact : FontSize.heroTitle)
+          .fontWeight(FontWeight.Bolder)
+          .fontColor(Colors.title)
+          .fontFamily('HarmonyOS Sans SC')
+          .shadow({ radius: 8, color: '#00000044', offsetX: 0, offsetY: 3 })
+
+        Text(`围绕 ${SNAIL_LEVELS.length} 个手工设计关卡重新整理的正式版：流程更完整，反馈更稳定，通关评级和最近游玩进度都会自动保存在本机。`)
+          .fontSize(15)
+          .lineHeight(24)
+          .fontColor(Colors.body)
+          .width(this.isCompactLayout() ? '100%' : '70%')
+
+        if (this.isCompactLayout()) {
+          Column({ space: 10 }) {
+            Row({ space: 10 }) {
+              this.metricCard('已完成', `${this.completedLevelCount()} / ${SNAIL_LEVELS.length}`, Colors.gold, 0)
+              this.metricCard('总评级', `${this.totalStarCount()} / ${SNAIL_LEVELS.length * 3}`, Colors.success, 1)
+            }
+            Row({ space: 10 }) {
+              this.metricCard('推荐关卡', `第 ${this.recommendedLevelIndex() + 1} 关`, Colors.warning, 2)
+              this.metricCard('当前记录', this.homeRecordSummary(), Colors.goal, 3)
+            }
           }
-        }
-        .width('100%')
-      } else {
-        Row({ space: 8 }) {
-          this.pill('发布版打磨', '#7A4D2C')
-          this.pill(`${SNAIL_LEVELS.length} 个精选关卡`, '#355F46')
-          this.pill('本地进度保存', '#566F23')
-        }
-        .width('100%')
-        .justifyContent(FlexAlign.Start)
-      }
-
-      Text('蜗牛推箱子')
-        .fontSize(this.isCompactLayout() ? 34 : 42)
-        .fontWeight(FontWeight.Bolder)
-        .fontColor('#FFF6E6')
-        .fontFamily('HarmonyOS Sans SC')
-
-      Text(`围绕 ${SNAIL_LEVELS.length} 个手工设计关卡重新整理的正式版：流程更完整，反馈更稳定，通关评级和最近游玩进度都会自动保存在本机。`)
-        .fontSize(15)
-        .lineHeight(24)
-        .fontColor('#E6DEC8')
-        .width(this.isCompactLayout() ? '100%' : '76%')
-
-      if (this.isCompactLayout()) {
-        Column({ space: 10 }) {
+          .width('100%')
+        } else {
           Row({ space: 10 }) {
-            this.metricCard('已完成', `${this.completedLevelCount()} / ${SNAIL_LEVELS.length}`, '#EBCB74')
-            this.metricCard('总评级', `${this.totalStarCount()} / ${SNAIL_LEVELS.length * 3}`, '#7BC19A')
+            this.metricCard('已完成', `${this.completedLevelCount()} / ${SNAIL_LEVELS.length}`, Colors.gold, 0)
+            this.metricCard('总评级', `${this.totalStarCount()} / ${SNAIL_LEVELS.length * 3}`, Colors.success, 1)
+            this.metricCard('推荐关卡', `第 ${this.recommendedLevelIndex() + 1} 关`, Colors.warning, 2)
+            this.metricCard('当前记录', this.homeRecordSummary(), Colors.goal, 3)
           }
-          Row({ space: 10 }) {
-            this.metricCard('推荐关卡', `第 ${this.recommendedLevelIndex() + 1} 关`, '#DFAE6B')
-            this.metricCard('当前记录', this.homeRecordSummary(), '#9FC5E8')
-          }
+          .width('100%')
         }
-        .width('100%')
-      } else {
-        Row({ space: 10 }) {
-          this.metricCard('已完成', `${this.completedLevelCount()} / ${SNAIL_LEVELS.length}`, '#EBCB74')
-          this.metricCard('总评级', `${this.totalStarCount()} / ${SNAIL_LEVELS.length * 3}`, '#7BC19A')
-          this.metricCard('推荐关卡', `第 ${this.recommendedLevelIndex() + 1} 关`, '#DFAE6B')
-          this.metricCard('当前记录', this.homeRecordSummary(), '#9FC5E8')
-        }
-        .width('100%')
-      }
 
-      if (this.isCompactLayout()) {
-        Column({ space: 10 }) {
-          this.heroButton(this.hasAnyRecord() ? '继续冒险' : '开始游戏', '#E0B457', true, true, () => this.continueAdventure())
-          this.heroButton('挑战推荐关卡', '#2E6A4E', true, true, () => this.playRecommendedLevel())
+        if (this.isCompactLayout()) {
+          Column({ space: 10 }) {
+            this.heroButton(this.hasAnyRecord() ? '继续冒险' : '开始游戏', 0, true, true, () => this.continueAdventure())
+            this.heroButton('挑战推荐关卡', 1, true, true, () => this.playRecommendedLevel())
+          }
+          .width('100%')
+        } else {
+          Row({ space: 10 }) {
+            this.heroButton(this.hasAnyRecord() ? '继续冒险' : '开始游戏', 0, true, false, () => this.continueAdventure())
+            this.heroButton('挑战推荐关卡', 1, true, false, () => this.playRecommendedLevel())
+          }
+          .width('100%')
         }
-        .width('100%')
-      } else {
-        Row({ space: 10 }) {
-          this.heroButton(this.hasAnyRecord() ? '继续冒险' : '开始游戏', '#E0B457', true, false, () => this.continueAdventure())
-          this.heroButton('挑战推荐关卡', '#2E6A4E', true, false, () => this.playRecommendedLevel())
-        }
-        .width('100%')
       }
+      .alignItems(HorizontalAlign.Start)
+      .width('100%')
     }
-    .alignItems(HorizontalAlign.Start)
     .width('100%')
-    .padding(this.isCompactLayout() ? 18 : 22)
-    .backgroundColor('#1B3B2D')
-    .borderRadius(28)
+    .padding(this.isCompactLayout() ? 20 : 26)
+    .backgroundColor(Colors.cardDeep)
+    .border({ width: 1, color: '#E6D5A822' })
+    .borderRadius(Radius.heroCard)
+    .shadow({ radius: Shadow.cardRadius, color: Colors.blackCardShadow, offsetX: 0, offsetY: Shadow.cardOffsetY })
   }
 
   @Builder
   private levelOverviewCard() {
     Column({ space: 14 }) {
       Text('关卡总览')
-        .fontSize(22)
+        .fontSize(FontSize.cardTitle)
         .fontWeight(FontWeight.Bold)
-        .fontColor('#FFF6E6')
+        .fontColor(Colors.title)
 
       Text(`当前一共 ${SNAIL_LEVELS.length} 关。每一关都支持重玩、通关评级和自动进度保存。`)
         .fontSize(14)
-        .fontColor('#D8D3C3')
+        .fontColor(Colors.body)
 
       ForEach(this.levelIndices(), (levelIndex: number) => {
         this.levelCard(levelIndex, false)
       }, (levelIndex: number) => `home-level-${levelIndex}`)
     }
     .width('100%')
-    .padding(18)
-    .backgroundColor('#183126')
-    .borderRadius(26)
+    .padding(this.isCompactLayout() ? 18 : 22)
+    .backgroundColor(Colors.cardMuted)
+    .border({ width: 1, color: '#E6D5A81F' })
+    .borderRadius(Radius.largeCard)
+    .shadow({ radius: Shadow.cardRadius, color: Colors.blackCardShadow, offsetX: 0, offsetY: Shadow.cardOffsetY })
   }
 
   @Builder
   private featureCard() {
     Column({ space: 12 }) {
       Text('系统特色')
-        .fontSize(22)
+        .fontSize(FontSize.cardTitle)
         .fontWeight(FontWeight.Bold)
-        .fontColor('#FFF6E6')
+        .fontColor(Colors.title)
 
       if (this.isCompactLayout()) {
-        Column({ space: 10 }) {
-          this.featureItem('稳定规则', '墙体、空洞、推箱判定分离处理，避免走出棋盘。')
-          this.featureItem('局内反馈', '支持撤销、重开、死角提示和即时状态说明。')
-          this.featureItem('发布级流程', '首页总览、自由选关、评级纪录和自动保存都已接通。')
+        Column({ space: 8 }) {
+          this.featureItem('稳定规则', '边界和推箱判定更稳。', 0)
+          this.featureItem('局内反馈', '撤销、重开和提示清楚。', 1)
+          this.featureItem('发布流程', '选关、评级和记录完整。', 2)
         }
       } else {
         Row({ space: 10 }) {
-          this.featureItem('稳定规则', '墙体、空洞、推箱判定分离处理，避免走出棋盘。')
-          this.featureItem('局内反馈', '支持撤销、重开、死角提示和即时状态说明。')
-          this.featureItem('发布级流程', '首页总览、自由选关、评级纪录和自动保存都已接通。')
+          this.featureItem('稳定规则', '边界和推箱判定更稳。', 0)
+          this.featureItem('局内反馈', '撤销、重开和提示清楚。', 1)
+          this.featureItem('发布流程', '选关、评级和记录完整。', 2)
         }
         .width('100%')
       }
     }
     .width('100%')
-    .padding(18)
-    .backgroundColor('#183126')
-    .borderRadius(26)
+    .padding(this.isCompactLayout() ? 16 : 18)
+    .backgroundColor(Colors.cardMuted)
+    .border({ width: 1, color: '#E6D5A814' })
+    .borderRadius(Radius.largeCard)
+    .shadow({ radius: 14, color: '#00000024', offsetX: 0, offsetY: 5 })
   }
 
   @Builder
@@ -830,19 +906,19 @@ struct Index {
             Button('返回总览')
               .fontSize(14)
               .fontWeight(FontWeight.Bold)
-              .fontColor('#FFFFFF')
-              .backgroundColor('#2D4C3B')
-              .border({ width: 1, color: '#E6D5A844' })
-              .borderRadius(16)
+              .fontColor(Colors.body)
+              .backgroundColor('#2D4C3B99')
+              .border({ width: 1, color: Colors.transparentPaperBorder })
+              .borderRadius(Radius.smallCard)
               .height(42)
               .shadow({ radius: 8, color: '#00000024', offsetX: 0, offsetY: 3 })
               .onClick(() => this.returnHome())
 
-            this.pill(`第 ${this.levelIndex + 1} 关`, '#7A4D2C')
+            this.pill(`第 ${this.levelIndex + 1} 关`, Colors.warning)
           }
           Row({ space: 8 }) {
             this.pill(this.currentLevel().difficulty, this.difficultyColor(this.currentLevel().difficulty))
-            this.pill(this.isCleared ? '已通关' : '进行中', this.isCleared ? '#2C7A51' : '#74603B')
+            this.pill(this.isCleared ? '已通关' : '进行中', this.isCleared ? Colors.successDark : Colors.boardWood)
           }
         }
         .width('100%')
@@ -851,73 +927,78 @@ struct Index {
           Button('返回总览')
             .fontSize(14)
             .fontWeight(FontWeight.Bold)
-            .fontColor('#FFFFFF')
-            .backgroundColor('#2D4C3B')
-            .border({ width: 1, color: '#E6D5A844' })
-            .borderRadius(16)
+            .fontColor(Colors.body)
+            .backgroundColor('#2D4C3B99')
+            .border({ width: 1, color: Colors.transparentPaperBorder })
+            .borderRadius(Radius.smallCard)
             .height(42)
             .shadow({ radius: 8, color: '#00000024', offsetX: 0, offsetY: 3 })
             .onClick(() => this.returnHome())
 
-          this.pill(`第 ${this.levelIndex + 1} 关`, '#7A4D2C')
+          this.pill(`第 ${this.levelIndex + 1} 关`, Colors.warning)
           this.pill(this.currentLevel().difficulty, this.difficultyColor(this.currentLevel().difficulty))
-          this.pill(this.isCleared ? '已通关' : '进行中', this.isCleared ? '#2C7A51' : '#74603B')
+          this.pill(this.isCleared ? '已通关' : '进行中', this.isCleared ? Colors.successDark : Colors.boardWood)
         }
         .width('100%')
         .justifyContent(FlexAlign.Start)
       }
 
       Text(this.currentLevelTitle())
-        .fontSize(this.isCompactLayout() ? 28 : 32)
+        .fontSize(this.isCompactLayout() ? FontSize.playTitleCompact : FontSize.playTitle)
         .fontWeight(FontWeight.Bold)
-        .fontColor('#FFF6E6')
+        .fontColor(Colors.title)
 
       Text(this.currentLevel().subtitle)
         .fontSize(14)
         .lineHeight(22)
-        .fontColor('#D8D3C3')
+        .fontColor(Colors.body)
 
       if (this.isCompactLayout()) {
         Column({ space: 8 }) {
           Row({ space: 8 }) {
-            this.pill(`目标 ${this.coveredGoalsText()}`, '#436A4F')
-            this.pill(`标杆 ${this.currentLevel().parMoves} 步`, '#61523A')
+            this.pill(`目标 ${this.coveredGoalsText()}`, Colors.cardDeepAlt)
+            this.pill(`标杆 ${this.currentLevel().parMoves} 步`, Colors.boardWood)
           }
           Row({ space: 8 }) {
-            this.pill(this.currentBestLabel(), '#345A73')
+            this.pill(this.currentBestLabel(), Colors.warning)
           }
         }
         .width('100%')
       } else {
         Row({ space: 8 }) {
-          this.pill(`目标 ${this.coveredGoalsText()}`, '#436A4F')
-          this.pill(`标杆 ${this.currentLevel().parMoves} 步`, '#61523A')
-          this.pill(this.currentBestLabel(), '#345A73')
+          this.pill(`目标 ${this.coveredGoalsText()}`, Colors.cardDeepAlt)
+          this.pill(`标杆 ${this.currentLevel().parMoves} 步`, Colors.boardWood)
+          this.pill(this.currentBestLabel(), Colors.warning)
         }
         .width('100%')
         .justifyContent(FlexAlign.Start)
       }
     }
     .width('100%')
+    .padding(this.isCompactLayout() ? 16 : 18)
+    .backgroundColor(Colors.cardHud)
+    .border({ width: 1, color: '#E6D5A822' })
+    .borderRadius(Radius.largeCard)
+    .shadow({ radius: 14, color: '#0000002A', offsetX: 0, offsetY: 5 })
   }
 
   @Builder
   private controlCard() {
     Column({ space: 14 }) {
       Text('局内控制')
-        .fontSize(20)
+        .fontSize(FontSize.panelTitle)
         .fontWeight(FontWeight.Bold)
-        .fontColor('#241C14')
+        .fontColor(Colors.textDark)
 
       Row({ space: 8 }) {
-        this.actionButton('上一关', '#6A5A47', this.levelIndex > 0, () => this.previousLevel())
-        this.actionButton('下一关', '#2F6A4B', this.canEnterNextLevel(), () => this.nextLevel())
+        this.actionButton('上一关', Colors.boardWood, this.levelIndex > 0, () => this.previousLevel())
+        this.actionButton('下一关', Colors.cardDeepAlt, this.canEnterNextLevel(), () => this.nextLevel())
       }
       .width('100%')
 
       Row({ space: 8 }) {
-        this.actionButton('撤销', '#8A633C', this.history.length > 0, () => this.undoMove())
-        this.actionButton('重开', '#A04F2F', true, () => this.resetLevel())
+        this.actionButton('撤销', Colors.warning, this.history.length > 0, () => this.undoMove())
+        this.actionButton('重开', Colors.danger, true, () => this.resetLevel())
       }
       .width('100%')
 
@@ -928,19 +1009,31 @@ struct Index {
       this.infoRow('评级标杆', `${this.currentLevel().parMoves} 步`)
       this.infoRow('最好成绩', this.currentBestLabel())
 
-      Text(this.statusText)
-        .fontSize(13)
-        .lineHeight(20)
-        .fontColor(this.statusFontColor())
-        .width('100%')
-        .padding(14)
-        .backgroundColor(this.statusBackgroundColor())
-        .borderRadius(14)
+      Row({ space: 12 }) {
+        Blank()
+          .width(5)
+          .height(46)
+          .backgroundColor(this.statusAccentColor())
+          .borderRadius(999)
+
+        Text(this.statusText)
+          .fontSize(13)
+          .lineHeight(20)
+          .fontColor(this.statusFontColor())
+          .layoutWeight(1)
+      }
+      .width('100%')
+      .padding(14)
+      .backgroundColor(this.statusBackgroundColor())
+      .border({ width: 1, color: '#8D5A1922' })
+      .borderRadius(Radius.smallCard)
     }
     .width('100%')
     .padding(18)
-    .backgroundColor('#F1E4CD')
-    .borderRadius(22)
+    .backgroundColor(Colors.paper)
+    .border({ width: 1, color: Colors.paperLine })
+    .borderRadius(24)
+    .shadow({ radius: 14, color: '#00000024', offsetX: 0, offsetY: 5 })
   }
 
   @Builder
@@ -948,13 +1041,13 @@ struct Index {
     Row({ space: 12 }) {
       Text('关卡')
         .fontSize(13)
-        .fontColor('#6B5B48')
+        .fontColor(Colors.textMutedDark)
         .width(74)
 
       Text(`第 ${this.levelIndex + 1} / ${SNAIL_LEVELS.length} 关 · ${this.currentLevel().name}`)
         .fontSize(13)
         .fontWeight(FontWeight.Medium)
-        .fontColor('#241C14')
+        .fontColor(Colors.textDark)
         .layoutWeight(1)
         .textAlign(TextAlign.End)
     }
@@ -965,39 +1058,41 @@ struct Index {
   private ruleCard() {
     Column({ space: 10 }) {
       Text('玩法与提示')
-        .fontSize(20)
+        .fontSize(FontSize.panelTitle)
         .fontWeight(FontWeight.Bold)
-        .fontColor('#241C14')
+        .fontColor(Colors.textDark)
 
       Text('1. 蜗牛每次只能移动一格，木箱只能推不能拉。')
         .fontSize(13)
         .lineHeight(20)
-        .fontColor('#4B3D2B')
+        .fontColor(Colors.textBrown)
 
       Text('2. 如果箱子后方是墙、木箱或空洞，当前步就会被阻止。')
         .fontSize(13)
         .lineHeight(20)
-        .fontColor('#4B3D2B')
+        .fontColor(Colors.textBrown)
 
       Text('3. 死角提示只负责提醒明显的角落卡死，最优解仍然需要自己规划。')
         .fontSize(13)
         .lineHeight(20)
-        .fontColor('#4B3D2B')
+        .fontColor(Colors.textBrown)
 
       Text(`本关提示：${this.currentLevel().hint}`)
         .fontSize(13)
         .lineHeight(20)
-        .fontColor('#56742B')
+        .fontColor(Colors.successDark)
 
       Text('说明：通关纪录、评级和最近游玩进度会自动保存。')
         .fontSize(13)
         .lineHeight(20)
-        .fontColor('#6A573C')
+        .fontColor(Colors.textMutedDark)
     }
     .width('100%')
     .padding(18)
-    .backgroundColor('#F1E4CD')
-    .borderRadius(22)
+    .backgroundColor(Colors.paper)
+    .border({ width: 1, color: Colors.paperLine })
+    .borderRadius(24)
+    .shadow({ radius: 12, color: '#00000020', offsetX: 0, offsetY: 4 })
   }
 
   @Builder
@@ -1005,10 +1100,10 @@ struct Index {
     Column({ space: 14 }) {
       Row({ space: 8 }) {
         Text('棋盘')
-          .fontSize(20)
+          .fontSize(FontSize.panelTitle)
           .fontWeight(FontWeight.Bold)
-          .fontColor('#FFF6E6')
-        this.pill(this.boardFooterLabel(), '#3F6A55')
+          .fontColor(Colors.title)
+        this.pill(this.boardFooterLabel(), Colors.cardDeepAlt)
       }
       .width('100%')
       .justifyContent(FlexAlign.Start)
@@ -1023,48 +1118,55 @@ struct Index {
             }
           }, (row: number) => `row-${row}`)
         }
-        .padding(14)
-        .backgroundColor('#DCC9A5')
-        .borderRadius(22)
+        .padding(this.isCompactLayout() ? 8 : 12)
+        .backgroundColor(Colors.boardInner)
+        .border({ width: 2, color: '#E8C886' })
+        .borderRadius(Radius.boardInner)
 
         if (this.isCleared) {
           this.clearOverlay()
         }
       }
       .width('100%')
-      .padding(16)
-      .backgroundColor('#21382B')
-      .borderRadius(24)
+      .padding(this.isCompactLayout() ? 10 : 14)
+      .backgroundColor(Colors.boardWood)
+      .border({ width: 2, color: '#D3B17A' })
+      .borderRadius(Radius.boardFrame)
+      .shadow({ radius: 18, color: '#00000044', offsetX: 0, offsetY: 7 })
 
       this.boardControlTray()
 
       Text(this.boardHintText())
         .fontSize(13)
         .lineHeight(20)
-        .fontColor('#D8D3C3')
+        .fontColor(Colors.body)
         .width('100%')
     }
     .width('100%')
-    .padding(18)
-    .backgroundColor('#173126')
-    .borderRadius(24)
+    .padding(this.isCompactLayout() ? 16 : 20)
+    .backgroundColor(Colors.boardFrame)
+    .border({ width: 1, color: '#E6D5A824' })
+    .borderRadius(Radius.boardFrame)
+    .shadow({ radius: 24, color: '#00000044', offsetX: 0, offsetY: 9 })
   }
 
   @Builder
   private clearOverlay() {
     Column({ space: 12 }) {
+      Image($r('app.media.sparkles'))
+        .width(130)
+        .height(48)
+        .objectFit(ImageFit.Contain)
+        .opacity(0.5)
+
       Text('关卡完成')
         .fontSize(28)
         .fontWeight(FontWeight.Bold)
-        .fontColor('#FFF6E6')
+        .fontColor(Colors.textDark)
 
-      Row({ space: 6 }) {
+      Row({ space: 8 }) {
         ForEach([0, 1, 2], (starIndex: number) => {
-          Text('★')
-            .fontSize(26)
-            .fontWeight(FontWeight.Bold)
-            .fontColor(starIndex < this.lastClearStars ? '#FFD86A' : '#6D7A5A')
-            .opacity(this.clearOverlayStarOpacity(starIndex))
+          this.starAsset(starIndex < this.lastClearStars, 34, this.clearOverlayStarOpacity(starIndex))
         }, (starIndex: number) => `clear-star-${starIndex}`)
       }
       .justifyContent(FlexAlign.Center)
@@ -1072,28 +1174,36 @@ struct Index {
       Text(this.clearOverlayLabel())
         .fontSize(14)
         .lineHeight(22)
-        .fontColor('#E8F6E8')
+        .fontColor(Colors.textBrown)
         .textAlign(TextAlign.Center)
 
-      Row({ space: 8 }) {
-        this.overlayButton(this.hasNextLevel() ? '下一关' : '回到总览', '#2E7A52', true, () => {
+      Blank()
+        .width('76%')
+        .height(2)
+        .backgroundColor('#C8944588')
+        .borderRadius(999)
+
+      Row({ space: 12 }) {
+        this.overlayButton(this.hasNextLevel() ? '下一关' : '回到总览', Colors.gold, true, () => {
           if (this.hasNextLevel()) {
             this.nextLevel();
           } else {
             this.returnHome();
           }
         })
-        this.overlayButton('重玩本关', '#A05A33', true, () => this.resetLevel())
+        this.overlayButton('重玩本关', Colors.boardWood, true, () => this.resetLevel())
       }
     }
     .padding({ left: 24, right: 24, top: 22, bottom: 22 })
-    .backgroundColor('#163927F2')
-    .border({ width: 1, color: '#9CD78A66' })
-    .borderRadius(20)
+    .backgroundColor('#F5E8C9EE')
+    .backgroundImage($r('app.media.card_panel_parchment'))
+    .backgroundImageSize({ width: '100%', height: '100%' })
+    .border({ width: 1, color: Colors.goldBorder })
+    .borderRadius(26)
     .opacity(this.clearOverlayOpacity())
     .scale({ x: this.clearOverlayScale(), y: this.clearOverlayScale() })
     .translate({ y: this.clearOverlayTranslateY() })
-    .shadow({ radius: 20, color: '#00000055', offsetX: 0, offsetY: 8 })
+    .shadow({ radius: Shadow.overlayRadius, color: Colors.blackOverlayShadow, offsetX: 0, offsetY: Shadow.overlayOffsetY })
   }
 
   @Builder
@@ -1102,29 +1212,30 @@ struct Index {
       Text('棋盘旁控制')
         .fontSize(16)
         .fontWeight(FontWeight.Bold)
-        .fontColor('#FFF6E6')
+        .fontColor(Colors.title)
         .width('100%')
 
       this.directionPad()
     }
     .width('100%')
     .padding(14)
-    .backgroundColor('#203528')
-    .borderRadius(18)
+    .backgroundColor(Colors.cardDeepAlt)
+    .border({ width: 1, color: '#E6D5A81F' })
+    .borderRadius(Radius.card)
   }
 
   @Builder
   private levelRailCard() {
     Column({ space: 12 }) {
       Text('路线总览')
-        .fontSize(20)
+        .fontSize(FontSize.panelTitle)
         .fontWeight(FontWeight.Bold)
-        .fontColor(this.currentView === VIEW_PLAY ? '#241C14' : '#FFF6E6')
+        .fontColor(this.currentView === VIEW_PLAY ? Colors.textDark : Colors.title)
 
       Text(this.campaignSummaryText())
         .fontSize(13)
         .lineHeight(20)
-        .fontColor(this.currentView === VIEW_PLAY ? '#5C4B38' : '#D8D3C3')
+        .fontColor(this.currentView === VIEW_PLAY ? Colors.textBrown : Colors.body)
 
       ForEach(this.levelIndices(), (levelIndex: number) => {
         this.levelCard(levelIndex, true)
@@ -1132,8 +1243,10 @@ struct Index {
     }
     .width('100%')
     .padding(18)
-    .backgroundColor(this.currentView === VIEW_PLAY ? '#F1E4CD' : '#183126')
+    .backgroundColor(this.currentView === VIEW_PLAY ? Colors.paper : Colors.cardMuted)
+    .border({ width: 1, color: this.currentView === VIEW_PLAY ? Colors.paperLine : '#E6D5A81F' })
     .borderRadius(24)
+    .shadow({ radius: 12, color: '#00000022', offsetX: 0, offsetY: 4 })
   }
 
   @Builder
@@ -1143,18 +1256,18 @@ struct Index {
         Column({ space: 4 }) {
           Text(`第 ${levelIndex + 1} 关`)
             .fontSize(12)
-            .fontColor('#7A6A57')
+            .fontColor(Colors.textMutedDark)
 
           Text(SNAIL_LEVELS[levelIndex].name)
             .fontSize(compact ? 16 : 18)
             .fontWeight(FontWeight.Bold)
-            .fontColor('#201912')
+            .fontColor(Colors.textDark)
 
           if (!compact) {
             Text(SNAIL_LEVELS[levelIndex].subtitle)
               .fontSize(12)
               .lineHeight(18)
-              .fontColor('#5B4B39')
+              .fontColor(Colors.textBrown)
           }
         }
         .layoutWeight(1)
@@ -1169,29 +1282,43 @@ struct Index {
       .alignItems(VerticalAlign.Top)
 
       Row({ space: 8 }) {
-        this.metaCard('目标', `${this.levelGoalCount(levelIndex)} 箱`)
-        this.metaCard('标杆', `${SNAIL_LEVELS[levelIndex].parMoves} 步`)
-        this.metaCard('纪录', this.levelRecordShortLabel(levelIndex))
+        this.metaCard('目标', `${this.levelGoalCount(levelIndex)} 箱`, 0)
+        this.metaCard('标杆', `${SNAIL_LEVELS[levelIndex].parMoves} 步`, 2)
+        this.metaCard('纪录', this.levelRecordShortLabel(levelIndex), 1)
       }
       .width('100%')
+
+      if (this.isLevelCleared(levelIndex)) {
+        Row({ space: 3 }) {
+          ForEach([0, 1, 2], (starIndex: number) => {
+            this.starAsset(starIndex < this.bestStarsForLevel(levelIndex), 16, 1)
+          }, (starIndex: number) => `level-star-${levelIndex}-${starIndex}`)
+        }
+        .width('100%')
+        .justifyContent(FlexAlign.End)
+      }
 
       if (!compact) {
         Text(SNAIL_LEVELS[levelIndex].hint)
           .fontSize(12)
           .lineHeight(18)
-          .fontColor('#587035')
+          .fontColor(Colors.successDark)
           .width('100%')
       }
 
       Text(this.levelActionHint(levelIndex))
         .fontSize(12)
-        .fontColor('#305B46')
+        .fontColor(Colors.successDark)
     }
     .alignItems(HorizontalAlign.Start)
     .width('100%')
     .padding(compact ? 14 : 16)
     .backgroundColor(this.levelCardBackground(levelIndex))
-    .borderRadius(18)
+    .backgroundImage($r('app.media.card_panel_parchment'))
+    .backgroundImageSize({ width: '100%', height: '100%' })
+    .border({ width: this.currentView === VIEW_PLAY && levelIndex === this.levelIndex ? 2 : 1, color: this.levelCardBorderColor(levelIndex) })
+    .borderRadius(Radius.button)
+    .shadow({ radius: 10, color: '#00000022', offsetX: 0, offsetY: 4 })
     .onClick(() => this.openLevel(levelIndex))
   }
 
@@ -1201,23 +1328,23 @@ struct Index {
       Text('方向键')
         .fontSize(16)
         .fontWeight(FontWeight.Bold)
-        .fontColor('#241C14')
+        .fontColor(Colors.title)
 
       Row({ space: 8 }) {
         Blank()
-          .width(72)
-          .height(48)
-        this.directionButton('上', () => this.moveSnail(-1, 0))
+          .width(this.directionButtonSize())
+          .height(this.directionButtonSize())
+        this.directionButton('▲', () => this.moveSnail(-1, 0))
         Blank()
-          .width(72)
-          .height(48)
+          .width(this.directionButtonSize())
+          .height(this.directionButtonSize())
       }
       .width(this.directionPadWidth())
 
       Row({ space: 8 }) {
-        this.directionButton('左', () => this.moveSnail(0, -1))
-        this.directionButton('下', () => this.moveSnail(1, 0))
-        this.directionButton('右', () => this.moveSnail(0, 1))
+        this.directionButton('◀', () => this.moveSnail(0, -1))
+        this.directionButton('▼', () => this.moveSnail(1, 0))
+        this.directionButton('▶', () => this.moveSnail(0, 1))
       }
       .width(this.directionPadWidth())
     }
@@ -1233,14 +1360,19 @@ struct Index {
         .height(this.cellSize())
     } else {
       Stack() {
-        Column() {
-          Blank()
+        if (this.isWallCell(row, col)) {
+          Image($r('app.media.moss_wall_tile'))
+            .width(this.cellSize())
+            .height(this.cellSize())
+            .objectFit(ImageFit.Fill)
+            .borderRadius(12)
+        } else {
+          Image($r('app.media.forest_floor_tile'))
+            .width(this.cellSize())
+            .height(this.cellSize())
+            .objectFit(ImageFit.Fill)
+            .borderRadius(Radius.cell)
         }
-        .width(this.cellSize())
-        .height(this.cellSize())
-        .backgroundColor(this.cellBackgroundColor(row, col))
-        .border({ width: 1, color: this.cellBorderColor(row, col) })
-        .borderRadius(this.isWallCell(row, col) ? 12 : 7)
 
         if (this.isGoalCell(row, col) && !this.isWallCell(row, col)) {
           this.goalToken(this.cellSize())
@@ -1256,175 +1388,78 @@ struct Index {
       }
       .width(this.cellSize())
       .height(this.cellSize())
+      .backgroundColor(this.cellBackgroundColor(row, col))
+      .border({ width: 1, color: this.cellBorderColor(row, col) })
+      .borderRadius(this.isWallCell(row, col) ? 12 : Radius.cell)
+      .shadow({ radius: this.isWallCell(row, col) ? 3 : 1, color: '#00000018', offsetX: 0, offsetY: 1 })
     }
   }
 
   @Builder
   private goalToken(size: number) {
-    Stack() {
-      Column() {
-        Blank()
-      }
-      .width(size * 0.76)
-      .height(size * 0.48)
-      .backgroundColor('#7FBF58')
-      .opacity(0.52)
-      .border({ width: 2, color: '#3E7635' })
-      .borderRadius(size * 0.28)
-
-      Column() {
-        Blank()
-      }
-      .width(size * 0.44)
-      .height(size * 0.06)
-      .backgroundColor('#E6F5A6')
-      .opacity(0.7)
-      .borderRadius(999)
-
-      Column() {
-        Blank()
-      }
-      .width(size * 0.14)
-      .height(size * 0.14)
-      .backgroundColor('#F6D36C')
-      .border({ width: 1, color: '#8A6A23' })
-      .borderRadius(size * 0.07)
-    }
+    Image($r('app.media.lily_goal'))
+      .width(size * 0.78)
+      .height(size * 0.78)
+      .objectFit(ImageFit.Contain)
   }
 
   @Builder
   private boxToken(size: number, onGoal: boolean, deadlocked: boolean) {
     Stack() {
-      Column() {
-        Blank()
+      if (deadlocked) {
+        Column() {
+          Blank()
+        }
+        .width(size * 0.88)
+        .height(size * 0.88)
+        .backgroundColor('#B45A4355')
+        .borderRadius(size * 0.22)
       }
-      .width(size * 0.74)
-      .height(size * 0.74)
-      .backgroundColor(deadlocked ? '#B55B45' : onGoal ? '#D9AE47' : '#B87B35')
-      .border({ width: 2, color: deadlocked ? '#6E2D1E' : onGoal ? '#7A5A16' : '#744918' })
-      .borderRadius(9)
-
-      Column() {
-        Blank()
-      }
-      .width(size * 0.68)
-      .height(size * 0.12)
-      .backgroundColor(deadlocked ? '#E2A091' : '#F6D089')
-      .opacity(0.8)
-      .borderRadius(4)
-
-      Row({ space: 0 }) {
-        Blank()
-          .width(size * 0.12)
-          .height(size * 0.66)
-          .backgroundColor(deadlocked ? '#8A3A2C' : '#8B5420')
-          .opacity(0.72)
-        Blank()
-          .width(size * 0.16)
-          .height(size * 0.66)
-          .opacity(0)
-        Blank()
-          .width(size * 0.12)
-          .height(size * 0.66)
-          .backgroundColor(deadlocked ? '#8A3A2C' : '#8B5420')
-          .opacity(0.72)
-      }
-
-      Text('X')
-        .fontSize(size * 0.42)
-        .fontWeight(FontWeight.Bold)
-        .fontColor(deadlocked ? '#FFE7DA' : '#5C3517')
-        .opacity(deadlocked ? 0.82 : 0.42)
 
       if (deadlocked) {
-        Text('!')
-          .fontSize(size * 0.24)
-          .fontWeight(FontWeight.Bold)
-          .fontColor('#FFF7EE')
+        Image($r('app.media.wood_box_deadlock'))
+          .width(size * 0.88)
+          .height(size * 0.88)
+          .objectFit(ImageFit.Contain)
+          .shadow({ radius: 5, color: '#00000030', offsetX: 0, offsetY: 2 })
+      } else {
+        Image($r('app.media.wood_box'))
+          .width(size * 0.86)
+          .height(size * 0.86)
+          .objectFit(ImageFit.Contain)
+          .shadow({ radius: 5, color: '#00000030', offsetX: 0, offsetY: 2 })
       }
     }
   }
 
   @Builder
   private snailToken(size: number) {
-    Row({ space: size * 0.02 }) {
-      Stack() {
-        Column() {
-          Blank()
-        }
-        .width(size * 0.42)
-        .height(size * 0.42)
-        .backgroundColor('#7B4324')
-        .border({ width: 2, color: '#4A2817' })
-        .borderRadius(size * 0.21)
-
-        Column() {
-          Blank()
-        }
-        .width(size * 0.26)
-        .height(size * 0.26)
-        .border({ width: 2, color: '#DDA857' })
-        .borderRadius(size * 0.13)
-
-        Column() {
-          Blank()
-        }
-        .width(size * 0.1)
-        .height(size * 0.1)
-        .backgroundColor('#F8DC97')
-        .borderRadius(size * 0.05)
-      }
-
-      Column({ space: size * 0.02 }) {
-        Row({ space: size * 0.14 }) {
-          Blank()
-            .width(size * 0.04)
-            .height(size * 0.2)
-            .backgroundColor('#F1B75C')
-            .borderRadius(999)
-          Blank()
-            .width(size * 0.04)
-            .height(size * 0.2)
-            .backgroundColor('#F1B75C')
-            .borderRadius(999)
-        }
-        .height(size * 0.14)
-
-        Blank()
-          .width(size * 0.34)
-          .height(size * 0.2)
-          .backgroundColor('#E39E3F')
-          .border({ width: 1, color: '#9F6123' })
-          .borderRadius(size * 0.1)
-
-        Row({ space: size * 0.05 }) {
-          Blank()
-            .width(size * 0.06)
-            .height(size * 0.06)
-            .backgroundColor('#241C14')
-            .borderRadius(size * 0.03)
-          Blank()
-            .width(size * 0.06)
-            .height(size * 0.06)
-            .backgroundColor('#241C14')
-            .borderRadius(size * 0.03)
-        }
-      }
-    }
-    .padding({ left: size * 0.06, right: size * 0.04 })
+    Image($r('app.media.snail_player'))
+      .width(size * 0.94)
+      .height(size * 0.94)
+      .objectFit(ImageFit.Contain)
+      .shadow({ radius: 6, color: '#00000038', offsetX: 0, offsetY: 2 })
   }
 
   @Builder
-  private metricCard(label: string, value: string, accentColor: string) {
+  private metricCard(label: string, value: string, accentColor: string, iconKind: number) {
     Column({ space: 8 }) {
-      Text(label)
-        .fontSize(12)
-        .fontColor('#E6DEC8')
+      Row({ space: 8 }) {
+        this.metricIcon(iconKind, 28)
+
+        Text(label)
+          .fontSize(12)
+          .fontColor(Colors.body)
+          .layoutWeight(1)
+      }
+      .width('100%')
+      .alignItems(VerticalAlign.Center)
 
       Text(value)
-        .fontSize(18)
+        .fontSize(17)
         .fontWeight(FontWeight.Bold)
-        .fontColor('#FFF6E6')
+        .fontColor(Colors.title)
+        .maxLines(1)
 
       Blank()
         .width('100%')
@@ -1435,28 +1470,92 @@ struct Index {
     .alignItems(HorizontalAlign.Start)
     .layoutWeight(1)
     .padding(14)
-    .backgroundColor('#244537')
-    .borderRadius(18)
+    .backgroundColor(Colors.cardDeepAlt)
+    .border({ width: 1, color: '#E6D5A81F' })
+    .borderRadius(Radius.button)
   }
 
   @Builder
-  private featureItem(title: string, body: string) {
-    Column({ space: 8 }) {
-      Text(title)
-        .fontSize(16)
-        .fontWeight(FontWeight.Bold)
-        .fontColor('#FFF6E6')
+  private featureItem(title: string, body: string, iconKind: number) {
+    Row({ space: 10 }) {
+      this.featureIcon(iconKind, 42)
 
-      Text(body)
-        .fontSize(13)
-        .lineHeight(20)
-        .fontColor('#D8D3C3')
+      Column({ space: 5 }) {
+        Text(title)
+          .fontSize(15)
+          .fontWeight(FontWeight.Bold)
+          .fontColor(Colors.title)
+
+        Text(body)
+          .fontSize(12)
+          .lineHeight(18)
+          .fontColor(Colors.bodyMuted)
+          .maxLines(2)
+      }
+      .layoutWeight(1)
+      .alignItems(HorizontalAlign.Start)
     }
-    .alignItems(HorizontalAlign.Start)
+    .alignItems(VerticalAlign.Center)
     .layoutWeight(1)
     .padding(14)
-    .backgroundColor('#214133')
-    .borderRadius(18)
+    .backgroundColor(Colors.cardDeepAlt)
+    .border({ width: 1, color: '#E6D5A814' })
+    .borderRadius(Radius.button)
+  }
+
+  @Builder
+  private metricIcon(iconKind: number, size: number) {
+    if (iconKind === 0) {
+      Image($r('app.media.lily_goal'))
+        .width(size)
+        .height(size)
+        .objectFit(ImageFit.Contain)
+    } else if (iconKind === 1) {
+      Image($r('app.media.gold_star'))
+        .width(size)
+        .height(size)
+        .objectFit(ImageFit.Contain)
+    } else if (iconKind === 2) {
+      Image($r('app.media.snail_player'))
+        .width(size)
+        .height(size)
+        .objectFit(ImageFit.Contain)
+    } else {
+      Image($r('app.media.wood_box'))
+        .width(size)
+        .height(size)
+        .objectFit(ImageFit.Contain)
+    }
+  }
+
+  @Builder
+  private featureIcon(iconKind: number, size: number) {
+    if (iconKind === 0) {
+      Image($r('app.media.moss_wall_tile'))
+        .width(size)
+        .height(size)
+        .objectFit(ImageFit.Cover)
+        .borderRadius(12)
+    } else if (iconKind === 1) {
+      Image($r('app.media.snail_player'))
+        .width(size)
+        .height(size)
+        .objectFit(ImageFit.Contain)
+    } else {
+      Image($r('app.media.gold_star'))
+        .width(size)
+        .height(size)
+        .objectFit(ImageFit.Contain)
+    }
+  }
+
+  @Builder
+  private starAsset(earned: boolean, size: number, revealOpacity: number) {
+    Image($r('app.media.gold_star'))
+      .width(size)
+      .height(size)
+      .objectFit(ImageFit.Contain)
+      .opacity(earned ? revealOpacity : 0.24)
   }
 
   @Builder
@@ -1464,13 +1563,13 @@ struct Index {
     Row({ space: 12 }) {
       Text(label)
         .fontSize(13)
-        .fontColor('#6B5B48')
+        .fontColor(Colors.textMutedDark)
         .width(74)
 
       Text(value)
         .fontSize(13)
         .fontWeight(FontWeight.Medium)
-        .fontColor('#241C14')
+        .fontColor(Colors.textDark)
         .layoutWeight(1)
         .textAlign(TextAlign.End)
     }
@@ -1478,65 +1577,96 @@ struct Index {
   }
 
   @Builder
-  private metaCard(label: string, value: string) {
-    Column({ space: 4 }) {
-      Text(label)
-        .fontSize(11)
-        .fontColor('#7A6A57')
+  private metaCard(label: string, value: string, iconKind: number) {
+    Row({ space: 7 }) {
+      this.metricIcon(iconKind, 22)
 
-      Text(value)
-        .fontSize(12)
-        .fontWeight(FontWeight.Medium)
-        .fontColor('#241C14')
+      Column({ space: 3 }) {
+        Text(label)
+          .fontSize(11)
+          .fontColor(Colors.textMutedDark)
+
+        Text(value)
+          .fontSize(12)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(Colors.textDark)
+          .maxLines(1)
+      }
+      .layoutWeight(1)
+      .alignItems(HorizontalAlign.Start)
     }
-    .alignItems(HorizontalAlign.Start)
+    .alignItems(VerticalAlign.Center)
     .layoutWeight(1)
     .padding(10)
-    .backgroundColor('#F5ECD8')
-    .borderRadius(14)
+    .backgroundColor(Colors.paperAlt)
+    .border({ width: 1, color: '#D9BE8A66' })
+    .borderRadius(Radius.smallCard)
   }
 
   @Builder
   private pill(label: string, color: string) {
     Text(label)
       .fontSize(12)
-      .fontColor('#FFFDF7')
+      .fontColor(Colors.title)
       .padding({ left: 12, right: 12, top: 7, bottom: 7 })
       .backgroundColor(color)
-      .borderRadius(999)
+      .border({ width: 1, color: '#FFF4CF33' })
+      .borderRadius(Radius.pill)
   }
 
   @Builder
-  private heroButton(label: string, color: string, enabled: boolean, block: boolean, handler: () => void) {
+  private heroButton(label: string, style: number, enabled: boolean, block: boolean, handler: () => void) {
     if (block) {
-      Button(label)
-        .fontSize(15)
-        .fontWeight(FontWeight.Bold)
-        .fontColor('#FFFFFF')
-        .backgroundColor(color)
-        .border({ width: 1, color: '#FFF4CF55' })
-        .borderRadius(16)
+      Stack() {
+        if (style === 0) {
+          Image($r('app.media.ui_button_primary'))
+            .width('100%')
+            .height('100%')
+            .objectFit(ImageFit.Fill)
+        } else {
+          Image($r('app.media.ui_button_green'))
+            .width('100%')
+            .height('100%')
+            .objectFit(ImageFit.Fill)
+        }
+
+        Text(label)
+          .fontSize(15)
+          .fontWeight(FontWeight.Bold)
+          .fontColor(style === 0 ? '#3A2407' : Colors.title)
+      }
         .width('100%')
-        .height(48)
+        .height(54)
         .opacity(enabled ? 1 : 0.4)
-        .shadow({ radius: 10, color: '#00000033', offsetX: 0, offsetY: 4 })
+        .shadow({ radius: style === 0 ? Shadow.primaryRadius : Shadow.buttonRadius, color: style === 0 ? Colors.blackPrimaryShadow : Colors.blackButtonShadow, offsetX: 0, offsetY: style === 0 ? Shadow.primaryOffsetY : Shadow.buttonOffsetY })
         .onClick(() => {
           if (enabled) {
             handler();
           }
         })
     } else {
-      Button(label)
-        .fontSize(15)
-        .fontWeight(FontWeight.Bold)
-        .fontColor('#FFFFFF')
-        .backgroundColor(color)
-        .border({ width: 1, color: '#FFF4CF55' })
-        .borderRadius(16)
+      Stack() {
+        if (style === 0) {
+          Image($r('app.media.ui_button_primary'))
+            .width('100%')
+            .height('100%')
+            .objectFit(ImageFit.Fill)
+        } else {
+          Image($r('app.media.ui_button_green'))
+            .width('100%')
+            .height('100%')
+            .objectFit(ImageFit.Fill)
+        }
+
+        Text(label)
+          .fontSize(15)
+          .fontWeight(FontWeight.Bold)
+          .fontColor(style === 0 ? '#3A2407' : Colors.title)
+      }
         .layoutWeight(1)
-        .height(48)
+        .height(54)
         .opacity(enabled ? 1 : 0.4)
-        .shadow({ radius: 10, color: '#00000033', offsetX: 0, offsetY: 4 })
+        .shadow({ radius: style === 0 ? Shadow.primaryRadius : Shadow.buttonRadius, color: style === 0 ? Colors.blackPrimaryShadow : Colors.blackButtonShadow, offsetX: 0, offsetY: style === 0 ? Shadow.primaryOffsetY : Shadow.buttonOffsetY })
         .onClick(() => {
           if (enabled) {
             handler();
@@ -1550,14 +1680,14 @@ struct Index {
     Button(label)
       .fontSize(14)
       .fontWeight(FontWeight.Bold)
-      .fontColor('#FFFFFF')
+      .fontColor(this.buttonTextColor(color))
       .backgroundColor(color)
-      .border({ width: 1, color: '#FFF4CF44' })
-      .borderRadius(16)
+      .border({ width: 1, color: this.buttonBorderColor(color) })
+      .borderRadius(Radius.button)
       .layoutWeight(1)
       .height(44)
       .opacity(enabled ? 1 : 0.4)
-      .shadow({ radius: 8, color: '#0000002E', offsetX: 0, offsetY: 3 })
+      .shadow({ radius: Shadow.buttonRadius, color: Colors.blackButtonShadow, offsetX: 0, offsetY: Shadow.buttonOffsetY })
       .onClick(() => {
         if (enabled) {
           handler();
@@ -1567,17 +1697,28 @@ struct Index {
 
   @Builder
   private overlayButton(label: string, color: string, enabled: boolean, handler: () => void) {
-    Button(label)
-      .fontSize(14)
-      .fontWeight(FontWeight.Bold)
-      .fontColor('#FFFFFF')
-      .backgroundColor(color)
-      .border({ width: 1, color: '#FFF4CF44' })
-      .borderRadius(16)
+    Stack() {
+      if (color === Colors.gold) {
+        Image($r('app.media.ui_button_primary'))
+          .width('100%')
+          .height('100%')
+          .objectFit(ImageFit.Fill)
+      } else {
+        Image($r('app.media.ui_button_green'))
+          .width('100%')
+          .height('100%')
+          .objectFit(ImageFit.Fill)
+      }
+
+      Text(label)
+        .fontSize(14)
+        .fontWeight(FontWeight.Bold)
+        .fontColor(color === Colors.gold ? '#3A2407' : Colors.title)
+    }
       .layoutWeight(1)
-      .height(44)
+      .height(48)
       .opacity(enabled ? 1 : 0.4)
-      .shadow({ radius: 8, color: '#00000033', offsetX: 0, offsetY: 3 })
+      .shadow({ radius: Shadow.buttonRadius, color: Colors.blackButtonShadow, offsetX: 0, offsetY: Shadow.buttonOffsetY })
       .onClick(() => {
         if (enabled) {
           handler();
@@ -1587,15 +1728,21 @@ struct Index {
 
   @Builder
   private directionButton(label: string, handler: () => void) {
-    Button(label)
-      .fontSize(16)
-      .fontWeight(FontWeight.Bold)
-      .fontColor('#FFFFFF')
-      .backgroundColor('#4B6F40')
-      .border({ width: 1, color: '#DCE9B855' })
-      .width(72)
-      .height(48)
-      .borderRadius(16)
+    Stack() {
+      Image($r('app.media.ui_button_green'))
+        .width('100%')
+        .height('100%')
+        .objectFit(ImageFit.Fill)
+
+      Text(label)
+        .fontSize(22)
+        .fontWeight(FontWeight.Bold)
+        .fontColor(Colors.title)
+        .shadow({ radius: 2, color: '#00000055', offsetX: 0, offsetY: 1 })
+    }
+      .width(this.directionButtonSize())
+      .height(this.directionButtonSize())
+      .borderRadius(18)
       .shadow({ radius: 7, color: '#0000002A', offsetX: 0, offsetY: 3 })
       .onClick(() => handler())
   }
@@ -1615,15 +1762,15 @@ struct Index {
 
   private statusBackgroundColor(): string {
     if (this.statusTone === 1) {
-      return '#D7F0D4';
+      return '#DDF2D7';
     }
     if (this.statusTone === 2) {
-      return '#F1E3C4';
+      return '#F4DFC0';
     }
     if (this.statusTone === 3) {
-      return '#F0CFC9';
+      return '#F2D0C8';
     }
-    return '#E8DEC7';
+    return '#F1E5CC';
   }
 
   private statusFontColor(): string {
@@ -1636,7 +1783,34 @@ struct Index {
     if (this.statusTone === 3) {
       return '#6B251A';
     }
-    return '#4A3A2A';
+    return Colors.textBrown;
+  }
+
+  private statusAccentColor(): string {
+    if (this.statusTone === 1) {
+      return Colors.success;
+    }
+    if (this.statusTone === 2) {
+      return Colors.warning;
+    }
+    if (this.statusTone === 3) {
+      return Colors.danger;
+    }
+    return Colors.successDark;
+  }
+
+  private buttonTextColor(color: string): string {
+    if (color === Colors.gold) {
+      return Colors.textDark;
+    }
+    return Colors.white;
+  }
+
+  private buttonBorderColor(color: string): string {
+    if (color === Colors.gold) {
+      return Colors.goldBorder;
+    }
+    return Colors.transparentGoldBorder;
   }
 
   private readSaveData(): SaveData {
@@ -1914,22 +2088,22 @@ struct Index {
 
   private levelStateColor(levelIndex: number): string {
     if (this.isLevelCleared(levelIndex)) {
-      return '#2F7A51';
+      return Colors.successDark;
     }
     if (this.isLevelChallenged(levelIndex)) {
-      return '#496D7C';
+      return Colors.cardDeepAlt;
     }
-    return '#8B6637';
+    return Colors.warning;
   }
 
   private difficultyColor(difficulty: string): string {
     if (difficulty === '入门') {
-      return '#5E8A2F';
+      return Colors.successDark;
     }
     if (difficulty === '挑战') {
-      return '#915032';
+      return Colors.danger;
     }
-    return '#496D7C';
+    return Colors.warning;
   }
 
   private levelActionHint(levelIndex: number): string {
@@ -1944,9 +2118,22 @@ struct Index {
 
   private levelCardBackground(levelIndex: number): string {
     if (this.currentView === VIEW_PLAY && levelIndex === this.levelIndex) {
-      return '#E9DCC0';
+      return '#F8E7BE';
+    }
+    if (!this.isLevelChallenged(levelIndex)) {
+      return Colors.paper;
     }
     return '#F1E4CD';
+  }
+
+  private levelCardBorderColor(levelIndex: number): string {
+    if (this.currentView === VIEW_PLAY && levelIndex === this.levelIndex) {
+      return Colors.gold;
+    }
+    if (this.isLevelCleared(levelIndex)) {
+      return '#9DBE72';
+    }
+    return '#D9BE8A88';
   }
 
   private canEnterNextLevel(): boolean {
@@ -2038,20 +2225,20 @@ struct Index {
 
   private cellBackgroundColor(row: number, col: number): string {
     if (this.isWallCell(row, col)) {
-      return '#5A6E48';
+      return Colors.wall;
     }
     if (this.isGoalCell(row, col)) {
-      return (row + col) % 2 === 0 ? '#E9E2AE' : '#E2D99A';
+      return Colors.goal;
     }
-    return (row + col) % 2 === 0 ? '#F3E4C4' : '#EBDAB6';
+    return (row + col) % 2 === 0 ? Colors.sandA : Colors.sandB;
   }
 
   private cellBorderColor(row: number, col: number): string {
     if (this.isWallCell(row, col)) {
-      return '#3F5136';
+      return Colors.wallBorder;
     }
     if (this.isGoalCell(row, col)) {
-      return '#B8B16B';
+      return '#9CBA63';
     }
     return '#D5C39E';
   }
@@ -2084,9 +2271,9 @@ struct Index {
     if (this.layoutWidth <= 0) {
       return 48;
     }
-    const availableWidth = this.isCompactLayout() ? this.layoutWidth - 124 : this.layoutWidth * 0.36 - 92;
+    const availableWidth = this.isCompactLayout() ? this.layoutWidth - 116 : this.layoutWidth * 0.38 - 92;
     const nextSize = Math.floor(availableWidth / Math.max(this.boardWidth, 1));
-    return Math.max(20, Math.min(56, nextSize));
+    return Math.max(this.isCompactLayout() ? 24 : 22, Math.min(56, nextSize));
   }
 
   private isCompactLayout(): boolean {
@@ -2094,7 +2281,11 @@ struct Index {
   }
 
   private directionPadWidth(): number {
-    return 72 * 3 + 8 * 2;
+    return this.directionButtonSize() * 3 + 8 * 2;
+  }
+
+  private directionButtonSize(): number {
+    return this.isCompactLayout() ? 56 : 60;
   }
 
   private updateLayoutWidth(width: number | string): void {
