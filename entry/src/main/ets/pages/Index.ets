@@ -1252,41 +1252,83 @@ struct Index {
   @Builder
   private levelCard(levelIndex: number, compact: boolean) {
     Column({ space: compact ? 8 : 10 }) {
-      Row({ space: 10 }) {
-        Column({ space: 4 }) {
-          Text(`第 ${levelIndex + 1} 关`)
-            .fontSize(12)
-            .fontColor(Colors.textMutedDark)
+      if (compact) {
+        Column({ space: 8 }) {
+          Column({ space: 4 }) {
+            Text(`第 ${levelIndex + 1} 关`)
+              .fontSize(12)
+              .fontColor(Colors.textMutedDark)
+              .width('100%')
 
-          Text(SNAIL_LEVELS[levelIndex].name)
-            .fontSize(compact ? 16 : 18)
-            .fontWeight(FontWeight.Bold)
-            .fontColor(Colors.textDark)
+            Text(SNAIL_LEVELS[levelIndex].name)
+              .fontSize(15)
+              .fontWeight(FontWeight.Bold)
+              .fontColor(Colors.textDark)
+              .maxLines(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
+              .width('100%')
+          }
+          .width('100%')
+          .alignItems(HorizontalAlign.Start)
 
-          if (!compact) {
+          Row({ space: 6 }) {
+            this.railPill(SNAIL_LEVELS[levelIndex].difficulty, this.difficultyColor(SNAIL_LEVELS[levelIndex].difficulty))
+            this.railPill(this.levelStateLabel(levelIndex), this.levelStateColor(levelIndex))
+          }
+          .width('100%')
+        }
+        .width('100%')
+      } else {
+        Row({ space: 10 }) {
+          Column({ space: 4 }) {
+            Text(`第 ${levelIndex + 1} 关`)
+              .fontSize(12)
+              .fontColor(Colors.textMutedDark)
+
+            Text(SNAIL_LEVELS[levelIndex].name)
+              .fontSize(18)
+              .fontWeight(FontWeight.Bold)
+              .fontColor(Colors.textDark)
+
             Text(SNAIL_LEVELS[levelIndex].subtitle)
               .fontSize(12)
               .lineHeight(18)
               .fontColor(Colors.textBrown)
           }
-        }
-        .layoutWeight(1)
-        .alignItems(HorizontalAlign.Start)
+          .layoutWeight(1)
+          .alignItems(HorizontalAlign.Start)
 
+          Column({ space: 6 }) {
+            this.pill(SNAIL_LEVELS[levelIndex].difficulty, this.difficultyColor(SNAIL_LEVELS[levelIndex].difficulty))
+            this.pill(this.levelStateLabel(levelIndex), this.levelStateColor(levelIndex))
+          }
+        }
+        .width('100%')
+        .alignItems(VerticalAlign.Top)
+      }
+
+      if (compact) {
         Column({ space: 6 }) {
-          this.pill(SNAIL_LEVELS[levelIndex].difficulty, this.difficultyColor(SNAIL_LEVELS[levelIndex].difficulty))
-          this.pill(this.levelStateLabel(levelIndex), this.levelStateColor(levelIndex))
-        }
-      }
-      .width('100%')
-      .alignItems(VerticalAlign.Top)
+          Row({ space: 6 }) {
+            this.railMetaCard('目标', `${this.levelGoalCount(levelIndex)} 箱`, 0)
+            this.railMetaCard('标杆', `${SNAIL_LEVELS[levelIndex].parMoves} 步`, 2)
+          }
+          .width('100%')
 
-      Row({ space: 8 }) {
-        this.metaCard('目标', `${this.levelGoalCount(levelIndex)} 箱`, 0)
-        this.metaCard('标杆', `${SNAIL_LEVELS[levelIndex].parMoves} 步`, 2)
-        this.metaCard('纪录', this.levelRecordShortLabel(levelIndex), 1)
+          Row({ space: 0 }) {
+            this.railMetaCard('纪录', this.levelRecordShortLabel(levelIndex), 1)
+          }
+          .width('100%')
+        }
+        .width('100%')
+      } else {
+        Row({ space: 8 }) {
+          this.metaCard('目标', `${this.levelGoalCount(levelIndex)} 箱`, 0)
+          this.metaCard('标杆', `${SNAIL_LEVELS[levelIndex].parMoves} 步`, 2)
+          this.metaCard('纪录', this.levelRecordShortLabel(levelIndex), 1)
+        }
+        .width('100%')
       }
-      .width('100%')
 
       if (this.isLevelCleared(levelIndex)) {
         Row({ space: 3 }) {
@@ -1309,6 +1351,9 @@ struct Index {
       Text(this.levelActionHint(levelIndex))
         .fontSize(12)
         .fontColor(Colors.successDark)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .width('100%')
     }
     .alignItems(HorizontalAlign.Start)
     .width('100%')
@@ -1604,6 +1649,38 @@ struct Index {
   }
 
   @Builder
+  private railMetaCard(label: string, value: string, iconKind: number) {
+    Row({ space: 5 }) {
+      this.metricIcon(iconKind, 18)
+
+      Column({ space: 2 }) {
+        Text(label)
+          .fontSize(10)
+          .fontColor(Colors.textMutedDark)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .width('100%')
+
+        Text(value)
+          .fontSize(11)
+          .fontWeight(FontWeight.Medium)
+          .fontColor(Colors.textDark)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .width('100%')
+      }
+      .layoutWeight(1)
+      .alignItems(HorizontalAlign.Start)
+    }
+    .alignItems(VerticalAlign.Center)
+    .layoutWeight(1)
+    .padding({ left: 7, right: 7, top: 7, bottom: 7 })
+    .backgroundColor(Colors.paperAlt)
+    .border({ width: 1, color: '#D9BE8A66' })
+    .borderRadius(12)
+  }
+
+  @Builder
   private pill(label: string, color: string) {
     Text(label)
       .fontSize(12)
@@ -1612,6 +1689,46 @@ struct Index {
       .backgroundColor(color)
       .border({ width: 1, color: '#FFF4CF33' })
       .borderRadius(Radius.pill)
+  }
+
+  @Builder
+  private railPill(label: string, color: string) {
+    Text(label)
+      .fontSize(11)
+      .fontColor(Colors.title)
+      .fontWeight(FontWeight.Medium)
+      .textAlign(TextAlign.Center)
+      .maxLines(1)
+      .textOverflow({ overflow: TextOverflow.Ellipsis })
+      .layoutWeight(1)
+      .padding({ left: 8, right: 8, top: 5, bottom: 5 })
+      .backgroundColor(color)
+      .border({ width: 1, color: '#FFF4CF44' })
+      .borderRadius(Radius.pill)
+  }
+
+  @Builder
+  private heroButtonHighlight(style: number) {
+    Column({ space: 3 }) {
+      Blank()
+        .width('72%')
+        .height(12)
+        .backgroundColor(style === 0 ? '#FFF6C9AA' : '#DFFFD088')
+        .borderRadius(999)
+
+      Blank()
+        .width('48%')
+        .height(3)
+        .backgroundColor(style === 0 ? '#FFFFFF99' : '#F8FFE099')
+        .borderRadius(999)
+
+      Blank()
+        .layoutWeight(1)
+    }
+    .width('100%')
+    .height('100%')
+    .padding({ top: 8 })
+    .alignItems(HorizontalAlign.Center)
   }
 
   @Builder
@@ -1629,6 +1746,8 @@ struct Index {
             .height('100%')
             .objectFit(ImageFit.Fill)
         }
+
+        this.heroButtonHighlight(style)
 
         Text(label)
           .fontSize(15)
@@ -1657,6 +1776,8 @@ struct Index {
             .height('100%')
             .objectFit(ImageFit.Fill)
         }
+
+        this.heroButtonHighlight(style)
 
         Text(label)
           .fontSize(15)
